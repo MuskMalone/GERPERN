@@ -1,9 +1,9 @@
-DEBUG = False
-SHOW_PATHS = False
+DEBUG = True
+SHOW_PATHS = True
 SHOW_SPLASH = True
-SPEED_MULTIPLIER = 2.0
+SPEED_MULTIPLIER = 1.0
 
-RED_MULTIPLIER = 1.15      # Set this to 1.0 for Easy Mode
+RED_MULTIPLIER = 1.0      # Set this to 1.0 for Easy Mode
                             # Set this to 1.15 for Hard Mode
 
 SCREEN_WIDTH = 1024
@@ -12,7 +12,7 @@ SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 
 TIME_LIMIT = 180 * 1 / SPEED_MULTIPLIER
 
-TEAM_NAME = ["Blue", "Red"]
+TEAM_NAME = ["GERPERN", "Red"]
 
 RESPAWN_TIME = 5. * 1 / SPEED_MULTIPLIER
 HEALING_COOLDOWN = 2. * 1 / SPEED_MULTIPLIER
