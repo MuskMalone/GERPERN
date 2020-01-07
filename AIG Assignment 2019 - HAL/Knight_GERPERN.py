@@ -6,7 +6,7 @@ from Graph import *
 from Character import *
 from State import *
 
-class Knight_TeamA(Character):
+class Knight_GERPERN(Character):
 
     def __init__(self, world, image, base, position):
 
@@ -22,9 +22,9 @@ class Knight_TeamA(Character):
         self.melee_damage = 20
         self.melee_cooldown = 2.
 
-        seeking_state = KnightStateSeeking_TeamA(self)
-        attacking_state = KnightStateAttacking_TeamA(self)
-        ko_state = KnightStateKO_TeamA(self)
+        seeking_state = KnightStateSeeking_GERPERN(self)
+        attacking_state = KnightStateAttacking_GERPERN(self)
+        ko_state = KnightStateKO_GERPERN(self)
 
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
@@ -50,7 +50,7 @@ class Knight_TeamA(Character):
    
 
 
-class KnightStateSeeking_TeamA(State):
+class KnightStateSeeking_GERPERN(State):
 
     def __init__(self, knight):
 
@@ -107,7 +107,7 @@ class KnightStateSeeking_TeamA(State):
             self.knight.move_target.position = self.knight.path_graph.nodes[self.knight.base.target_node_index].position
 
 
-class KnightStateAttacking_TeamA(State):
+class KnightStateAttacking_GERPERN(State):
 
     def __init__(self, knight):
 
@@ -142,7 +142,7 @@ class KnightStateAttacking_TeamA(State):
         return None
 
 
-class KnightStateKO_TeamA(State):
+class KnightStateKO_GERPERN(State):
 
     def __init__(self, knight):
 

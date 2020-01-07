@@ -6,7 +6,7 @@ from Graph import *
 from Character import *
 from State import *
 
-class Wizard_TeamA(Character):
+class Wizard_GERPERN(Character):
 
     def __init__(self, world, image, projectile_image, base, position, explosion_image = None):
 
@@ -25,9 +25,9 @@ class Wizard_TeamA(Character):
         self.projectile_range = 100
         self.projectile_speed = 100
 
-        seeking_state = WizardStateSeeking_TeamA(self)
-        attacking_state = WizardStateAttacking_TeamA(self)
-        ko_state = WizardStateKO_TeamA(self)
+        seeking_state = WizardStateSeeking_GERPERN(self)
+        attacking_state = WizardStateAttacking_GERPERN(self)
+        ko_state = WizardStateKO_GERPERN(self)
 
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
@@ -50,7 +50,7 @@ class Wizard_TeamA(Character):
             self.level_up(level_up_stats[choice])      
 
 
-class WizardStateSeeking_TeamA(State):
+class WizardStateSeeking_GERPERN(State):
 
     def __init__(self, wizard):
 
@@ -105,7 +105,7 @@ class WizardStateSeeking_TeamA(State):
             self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.base.target_node_index].position
 
 
-class WizardStateAttacking_TeamA(State):
+class WizardStateAttacking_GERPERN(State):
 
     def __init__(self, wizard):
 
@@ -143,7 +143,7 @@ class WizardStateAttacking_TeamA(State):
         return None
 
 
-class WizardStateKO_TeamA(State):
+class WizardStateKO_GERPERN(State):
 
     def __init__(self, wizard):
 

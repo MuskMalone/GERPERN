@@ -6,7 +6,7 @@ from Graph import *
 from Character import *
 from State import *
 
-class Archer_TeamA(Character):
+class Archer_GERPERN(Character):
 
     def __init__(self, world, image, projectile_image, base, position):
 
@@ -24,9 +24,9 @@ class Archer_TeamA(Character):
         self.projectile_range = 100
         self.projectile_speed = 100
 
-        seeking_state = ArcherStateSeeking_TeamA(self)
-        attacking_state = ArcherStateAttacking_TeamA(self)
-        ko_state = ArcherStateKO_TeamA(self)
+        seeking_state = ArcherStateSeeking_GERPERN(self)
+        attacking_state = ArcherStateAttacking_GERPERN(self)
+        ko_state = ArcherStateKO_GERPERN(self)
 
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
@@ -49,7 +49,7 @@ class Archer_TeamA(Character):
             self.level_up(level_up_stats[choice])   
 
 
-class ArcherStateSeeking_TeamA(State):
+class ArcherStateSeeking_GERPERN(State):
 
     def __init__(self, archer):
 
@@ -105,7 +105,7 @@ class ArcherStateSeeking_TeamA(State):
             self.archer.move_target.position = self.archer.path_graph.nodes[self.archer.base.target_node_index].position
 
 
-class ArcherStateAttacking_TeamA(State):
+class ArcherStateAttacking_GERPERN(State):
 
     def __init__(self, archer):
 
@@ -143,7 +143,7 @@ class ArcherStateAttacking_TeamA(State):
         return None
 
 
-class ArcherStateKO_TeamA(State):
+class ArcherStateKO_GERPERN(State):
 
     def __init__(self, archer):
 
