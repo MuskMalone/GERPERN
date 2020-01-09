@@ -22,10 +22,12 @@ class Knight_GERPERN(Character):
         self.melee_damage = 20
         self.melee_cooldown = 2.
 
+        fleeing_state = KnightStateFleeing_GERPERN(self)
         seeking_state = KnightStateSeeking_GERPERN(self)
         attacking_state = KnightStateAttacking_GERPERN(self)
         ko_state = KnightStateKO_GERPERN(self)
 
+        self.brain.add_state(fleeing_state)
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
         self.brain.add_state(ko_state)
@@ -49,6 +51,62 @@ class Knight_GERPERN(Character):
 
    
 
+class KnightStateFleeing_GERPERN(State):
+    
+    def __init__(self, knight):
+
+        State.__init__(self, "fleeing")
+        self.knight = knight
+
+
+    def do_actions(self):
+
+        self.knight.velocity = self.knight.position - self.knight.move_target.position
+        if self.knight.velocity.length() > 0:
+            self.knight.velocity.normalize_ip();
+            self.knight.velocity *= self.knight.maxSpeed
+
+
+    def check_conditions(self):
+
+        # check if opponent is in range
+        nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
+        if nearest_opponent is not None:
+            opponent_distance = (self.knight.position - nearest_opponent.position).length()
+            if opponent_distance <= self.knight.min_target_distance and self.knight.target.current_melee_cooldown:
+                    self.knight.target = nearest_opponent
+                    return 
+        
+        if (self.knight.position - self.knight.move_target.position).length() < 8:
+
+            # continue on path
+            if self.current_connection < self.path_length and self.current_connection >= 0 :
+                self.knight.move_target.position = self.path[self.current_connection].toNode.position
+                self.current_connection -= 1
+
+        if self.knight.target.current_melee_cooldown > 0 or self.knight.target.current_ranged_cooldown > 0:
+            return "seeking"
+            
+        return None
+
+
+    def entry_actions(self):
+
+        nearest_node = self.knight.path_graph.get_nearest_node(self.knight.position)
+
+        self.path = pathFindAStar(self.knight.path_graph, \
+                                  nearest_node, \
+                                  self.knight.path_graph.nodes[self.knight.base.target_node_index])
+
+        
+        self.path_length = len(self.path)
+
+        if (self.path_length > 0):
+            self.current_connection = 0
+            self.knight.move_target.position = self.path[0].fromNode.position
+
+        else:
+            self.knight.move_target.position = self.knight.path_graph.nodes[self.knight.base.target_node_index].position
 
 class KnightStateSeeking_GERPERN(State):
 
@@ -119,7 +177,9 @@ class KnightStateAttacking_GERPERN(State):
         # colliding with target
         if pygame.sprite.collide_rect(self.knight, self.knight.target):
             self.knight.velocity = Vector2(0, 0)
-            self.knight.melee_attack(self.knight.target)
+            if self.knight.current_healing_cooldown <= 0:
+                self.knight.melee_attack(self.knight.target)
+                self.knight.heal()
 
         else:
             self.knight.velocity = self.knight.target.position - self.knight.position
@@ -134,6 +194,9 @@ class KnightStateAttacking_GERPERN(State):
         if self.knight.world.get(self.knight.target.id) is None or self.knight.target.ko:
             self.knight.target = None
             return "seeking"
+
+        if self.knight.target.current_melee_cooldown <= 0 or self.knight.target.current_ranged_cooldown <= 0:
+            return "fleeing"
             
         return None
 
