@@ -498,10 +498,12 @@ def run():
 
         # check for end of game
         if not world.game_end:
-            time_passed = clock.tick(240)
+            time_passed = clock.tick(30)
             world.process(time_passed)
 
-        print(blue_knight.brain.active_state.name)
+        #print(blue_knight.brain.active_state.name)
+        #for key, value in blue_knight.positions.items():
+        #    print(str(value) + key)
 
         world.render(screen)
         

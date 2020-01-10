@@ -17,8 +17,10 @@ class Knight_GERPERN(Character):
         self.move_target = GameEntity(world, "knight_move_target", None)
         self.target = None
 
-        self.pos1 = None
-        self.pos2 = None
+        self.positions = {}
+        self.dodge_vector = None
+        self.time_passed = None
+        self.padding = 1.
 
         self.maxSpeed = 80
         self.min_target_distance = 100
@@ -52,6 +54,8 @@ class Knight_GERPERN(Character):
             choice = randint(0, len(level_up_stats) - 1)
             self.level_up(level_up_stats[choice])
 
+        self.time_passed = time_passed
+        self.padding -= time_passed
    
 
 class KnightStateFleeing_GERPERN(State):
@@ -94,22 +98,25 @@ class KnightStateFleeing_GERPERN(State):
 
         #check if hes dodged
         if (self.knight.position - self.dodge_position).length() <= 3:
-            self.knight.velocity = Vector2(0, 0)
             self.dodge_target = self.og_position
             self.dodged = True
 
         if self.dodged == True and (self.knight.position - self.og_position).length() <= 3:
-            if self.knight.target.current_melee_cooldown > 0 or self.knight.target.current_ranged_cooldown > 0:
-                self.dodged = False
-                return "seeking"
+            self.dodged = False
+            return "seeking"
             
         return None
 
 
     def entry_actions(self):
-        
-        self.og_position = self.knight.position
-        self.dodge_position = self.knight.position + Vector2(19,19)
+        print(str(self.knight.positions["pos1"]))
+        print(str(self.knight.positions["pos2"]))
+        dir_vector = (self.knight.positions["pos1"] - self.knight.positions["pos2"])*1000
+        dodge_vector = dir_vector.rotate(90)
+        dodge_vector.normalize_ip()
+
+        self.og_position = Vector2(self.knight.position.x, self.knight.position.y)
+        self.dodge_position = Vector2(self.knight.position.x, self.knight.position.y) + (dodge_vector*16)
         self.dodge_target = self.dodge_position
 
 
@@ -119,7 +126,6 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-
         self.knight.path_graph = self.knight.world.paths[randint(0, len(self.knight.world.paths)-1)]
 
 
@@ -139,6 +145,7 @@ class KnightStateSeeking_GERPERN(State):
             opponent_distance = (self.knight.position - nearest_opponent.position).length()
             if opponent_distance <= self.knight.min_target_distance:
                     self.knight.target = nearest_opponent
+
                     return "attacking"
         
         if (self.knight.position - self.knight.move_target.position).length() < 8:
@@ -168,10 +175,10 @@ class KnightStateSeeking_GERPERN(State):
 
         else:
             self.knight.move_target.position = self.knight.path_graph.nodes[self.knight.base.target_node_index].position
-
     def exit_actions(self):
+        self.knight.positions["pos1"] = Vector2(self.knight.position.x, self.knight.position.y)
+        print(str(self.knight.positions["pos1"]))
         return None
-
 
 class KnightStateAttacking_GERPERN(State):
 
@@ -199,6 +206,7 @@ class KnightStateAttacking_GERPERN(State):
     def check_conditions(self):
 
         # target is gone
+        
         if self.knight.world.get(self.knight.target.id) is None or self.knight.target.ko:
             self.knight.target = None
             return "seeking"
@@ -212,9 +220,12 @@ class KnightStateAttacking_GERPERN(State):
         return None
 
     def entry_actions(self):
-
+        self.knight.padding = 3
         return None
     def exit_actions(self):
+        self.knight.positions["pos2"] = Vector2(self.knight.position.x, self.knight.position.y)
+        for key, value in self.knight.positions.items():
+            print(str(value))
         return None
 
 
