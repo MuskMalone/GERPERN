@@ -17,9 +17,9 @@ class Decision(object):
 
     def getBranch(self):
 
-        answer = input(self.message + " ")
+        answer = exec(self.message)
 
-        if answer.upper() == 'Y':
+        if answer == True:
             return self.trueNode
         else:
             return self.falseNode
@@ -46,18 +46,21 @@ class Knight_GERPERN(Character):
         self.positions = {}
         self.dodge_vector = None
         self.flee_cooldown = 0.
+        self.detection_distance = 200
 
         self.maxSpeed = 80
         self.min_target_distance = 100
         self.melee_damage = 20
         self.melee_cooldown = 2.
 
+        deciding_state = KnightStateDeciding_GERPERN(self)
         fleeing_state = KnightStateFleeing_GERPERN(self)
         dodging_state = KnightStateDodging_GERPERN(self)
         seeking_state = KnightStateSeeking_GERPERN(self)
         attacking_state = KnightStateAttacking_GERPERN(self)
         ko_state = KnightStateKO_GERPERN(self)
 
+        self.brain.add_state(deciding_state)
         self.brain.add_state(fleeing_state)
         self.brain.add_state(dodging_state)
         self.brain.add_state(seeking_state)
@@ -82,6 +85,74 @@ class Knight_GERPERN(Character):
             self.level_up(level_up_stats[choice])
 
         self.flee_cooldown -= time_passed
+        self.get_enemy_count()
+        print(str(self.is_enemy_ranged()))
+
+    def get_enemy_count(self):
+        entities = self.world.entities
+        near_entities = {}
+
+        for name, entity in entities.items():
+
+            # neutral entity
+            if entity.team_id == 2:
+                continue
+
+            # same team
+            if entity.team_id == self.team_id:
+                continue
+
+            if entity.name == "projectile" or entity.name == "explosion":
+                continue
+
+            if entity.ko:
+                continue
+
+            if (self.position - entity.position).length() <= self.detection_distance:
+                near_entities[name] = entity
+
+        print(str(len(near_entities)))
+        return len(near_entities)
+
+    def is_enemy_ranged(self):
+
+        if self.target is not None:
+            if self.target.name == "archer" or self.target.name == "wizard" or self.target.name == "tower" or self.target.name == "base":
+                return True
+            else:
+                return False
+
+        return False
+
+
+class KnightStateDeciding_GERPERN(State):
+        
+    def __init__(self, knight):
+
+        State.__init__(self, "deciding")
+        self.knight = knight
+
+        self.fleeingNode = Decision(message = "fleeing", nodeType = "answer")
+        self.dodgingNode = Decision(message = "dodging", nodeType = "answer")
+        self.seekingNode = Decision(message = "seeking", nodeType = "answer")
+        self.attackingNode = Decision(message = "attacking", nodeType = "answer")
+        self.root = Decision(self.fleeingNode, self.dodgingNode, "Does it have fur?", nodeType = "question")
+    
+    def do_actions(self):
+        return None
+
+    def check_conditions(self):
+        action = root.makeDecision()
+
+        answer = print(action.message)
+
+        return None
+
+    def entry_actions(self):
+        return None
+
+    def exit_actions(self):
+        return None
 
 class KnightStateFleeing_GERPERN(State):
     
