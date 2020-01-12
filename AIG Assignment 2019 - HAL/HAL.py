@@ -501,9 +501,7 @@ def run():
             time_passed = clock.tick(30)
             world.process(time_passed)
 
-        #print(blue_knight.brain.active_state.name)
-        #for key, value in blue_knight.positions.items():
-        #    print(str(value) + key)
+        print(blue_knight.brain.active_state.name)
 
         world.render(screen)
         
