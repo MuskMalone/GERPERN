@@ -222,7 +222,8 @@ class KnightStateDodging_GERPERN(State):
     def check_conditions(self):
 
         #check if hes dodged
-        if (self.knight.position - self.dodge_position).length() <= 5:
+        if self.dodged is False and (self.knight.position - self.dodge_position).length() <= 5:
+            self.knight.velocity = Vector2(0,0)
             self.dodge_target = self.og_position
             self.dodged = True
 
@@ -317,9 +318,7 @@ class KnightStateSeeking_GERPERN(State):
         # check if opponent is in range
         nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
         if nearest_opponent is not None:
-            opponent_distance = (self.knight.position - nearest_opponent.position).length()
-            if opponent_distance <= self.knight.min_target_distance:
-                    self.knight.target = nearest_opponent
+            self.knight.target = nearest_opponent
         return None
 
 class KnightStateAttacking_GERPERN(State):
@@ -367,7 +366,7 @@ class KnightStateAttacking_GERPERN(State):
         return None
 
     def entry_actions(self):
-        #INSTANT WIN
+        ##INSTANT WIN
         #for entity in self.knight.world.entities.values():
         #    if entity.team_id != 2 and entity.team_id != self.knight.team_id:
         #        if entity.name == "base":
