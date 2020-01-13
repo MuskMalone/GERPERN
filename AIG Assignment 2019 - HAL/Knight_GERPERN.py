@@ -47,12 +47,20 @@ class Knight_GERPERN(Character):
         self.positions = {}
         self.dodge_vector = None
         self.dodge_cooldown = 0.
-        self.detection_distance = 200
+        self.detection_distance = 150
 
         self.maxSpeed = 80
         self.min_target_distance = 100
         self.melee_damage = 20
         self.melee_cooldown = 2.
+        self.true_target_index = 0
+        if self.base.spawn_node_index == 0:
+            self.true_target_index = 24
+        elif self.base.spawn_node_index == 4:
+            self.true_target_index = 0
+
+        self.graph = Graph(self)
+        self.generate_pathfinding_graphs("knight_paths.txt")
 
         self.fleeingNode = Decision(message = "fleeing", nodeType = "answer", knight = self) #fleeing state
         self.dodgingNode = Decision(message = "dodging", nodeType = "answer", knight = self) #dodging state
@@ -63,8 +71,8 @@ class Knight_GERPERN(Character):
         self.isdodgedNode = Decision(self.istargetattackNode, self.attackingNode, message = "self.knight.dodge_cooldown <= 0", nodeType = "question", knight = self) #is dodging allowed
         self.israngedNode = Decision(self.isdodgedNode, self.attackingNode, message = "self.knight.is_enemy_ranged()", nodeType = "question", knight = self) #is single enemy ranged
         self.multipleenemyNode = Decision(self.seekingNode, self.israngedNode, message = "self.knight.get_enemy_count() > 1", nodeType = "question", knight = self) #is multiple enemy
-        self.halfhealthNode = Decision(self.fleeingNode, self.multipleenemyNode, message = "self.knight.current_hp <= (self.knight.max_hp / 2)", nodeType= "question", knight = self) #is health half
-        self.root = Decision(self.halfhealthNode, self.seekingNode, "self.knight.get_enemy_count() > 0", nodeType = "question", knight = self) #is enemy there 
+        self.halfenoughNode = Decision(self.fleeingNode, self.multipleenemyNode, message = "self.knight.current_hp <= 3*(self.knight.max_hp / 4)", nodeType= "question", knight = self) #is health enough
+        self.root = Decision(self.halfenoughNode, self.seekingNode, "self.knight.get_enemy_count() > 0", nodeType = "question", knight = self) #is enemy there 
 
         fleeing_state = KnightStateFleeing_GERPERN(self)
         dodging_state = KnightStateDodging_GERPERN(self)
@@ -83,6 +91,7 @@ class Knight_GERPERN(Character):
 
     def render(self, surface):
 
+        self.graph.render(surface)
         Character.render(self, surface)
 
 
@@ -117,7 +126,7 @@ class Knight_GERPERN(Character):
             if entity.ko:
                 continue
 
-            if (self.position - entity.position).length() <= self.min_target_distance:
+            if (self.position - entity.position).length() <= self.detection_distance:
                 near_entities[name] = entity
 
         return len(near_entities)
@@ -131,6 +140,54 @@ class Knight_GERPERN(Character):
                 return False
 
         return False
+        # --- Reads a set of pathfinding graphs from a file ---
+    def generate_pathfinding_graphs(self, filename):
+
+        f = open(filename, "r")
+
+        # Create the nodes
+        line = f.readline()
+        while line != "connections\n":
+            data = line.split()
+            self.graph.nodes[int(data[0])] = Node(self.graph, int(data[0]), int(data[1]), int(data[2]))
+            line = f.readline()
+
+        # Create the connections
+        line = f.readline()
+        while line != "paths\n":
+            data = line.split()
+            node0 = int(data[0])
+            node1 = int(data[1])
+            distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+            self.graph.nodes[node0].addConnection(self.graph.nodes[node1], distance)
+            self.graph.nodes[node1].addConnection(self.graph.nodes[node0], distance)
+            line = f.readline()
+
+        # Create the orc paths, which are also Graphs
+        self.paths = []
+        line = f.readline()
+        while line != "":
+            path = Graph(self)
+            data = line.split()
+            
+            # Create the nodes
+            for i in range(0, len(data)):
+                node = self.graph.nodes[int(data[i])]
+                path.nodes[int(data[i])] = Node(path, int(data[i]), node.position[0], node.position[1])
+
+            # Create the connections
+            for i in range(0, len(data)-1):
+                node0 = int(data[i])
+                node1 = int(data[i + 1])
+                distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+                path.nodes[node0].addConnection(path.nodes[node1], distance)
+                path.nodes[node1].addConnection(path.nodes[node0], distance)
+                
+            self.paths.append(path)
+
+            line = f.readline()
+
+        f.close()
 
 class KnightStateFleeing_GERPERN(State):
 
@@ -138,7 +195,7 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.knight.path_graph = self.knight.world.paths[randint(0, len(self.knight.world.paths)-1)]
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
 
     def do_actions(self):
@@ -180,14 +237,15 @@ class KnightStateFleeing_GERPERN(State):
 
     def entry_actions(self):
 
-        nearest_node = self.knight.path_graph.get_nearest_node(self.knight.position)
+        nearest_node = self.path_graph.get_nearest_node(self.knight.position)
 
-        self.path = pathFindAStar(self.knight.path_graph, \
+        self.path = pathFindAStar(self.path_graph, \
                                   nearest_node, \
-                                  self.knight.path_graph.nodes[self.knight.base.spawn_node_index])
+                                  self.path_graph.nodes[self.knight.base.spawn_node_index])
 
         
         self.path_length = len(self.path)
+        print(str(len(self.path)))
 
         if (self.path_length > 0):
             self.current_connection = 0
@@ -197,8 +255,6 @@ class KnightStateFleeing_GERPERN(State):
             self.knight.move_target.position = self.knight.path_graph.nodes[self.knight.base.spawn_node_index].position
 
     def exit_actions(self):
-        self.knight.positions["pos1"] = Vector2(self.knight.position.x, self.knight.position.y)
-        print(str(self.knight.positions["pos1"]))
         return None
 
 class KnightStateDodging_GERPERN(State):
@@ -226,8 +282,12 @@ class KnightStateDodging_GERPERN(State):
             self.knight.velocity = Vector2(0,0)
             self.dodge_target = self.og_position
             self.dodged = True
+        if self.knight.velocity == Vector2(0,0):
+            self.knight.velocity = Vector2(0,0)
+            self.dodge_target = self.og_position
+            self.dodged = True
 
-        if self.dodged == True and (self.knight.position - self.og_position).length() <= 5:
+        if self.dodged == True:# and (self.knight.position - self.og_position).length() <= 5:
             self.dodged = False
             action = self.knight.root.makeDecision()
             state = action.message
@@ -242,6 +302,11 @@ class KnightStateDodging_GERPERN(State):
         dir_vector = (Vector2(self.knight.position.x, self.knight.position.y) - Vector2(self.knight.target.position.x, self.knight.target.position.y))*1000
         dodge_vector = dir_vector.rotate(90)
         dodge_vector.normalize_ip()
+        chance = randint(0,1)
+        if chance == 0:
+            dodge_vector = dodge_vector*1
+        else:
+            dodge_vector = dodge_vector*-1
 
         self.og_position = Vector2(self.knight.position.x, self.knight.position.y)
         self.dodge_position = Vector2(self.knight.position.x, self.knight.position.y) + (dodge_vector*40)
@@ -258,7 +323,7 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        self.knight.path_graph = self.knight.world.paths[0]#randint(0, len(self.knight.world.paths)-1)]
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
 
     def do_actions(self):
@@ -297,24 +362,24 @@ class KnightStateSeeking_GERPERN(State):
 
     def entry_actions(self):
         self.knight.target = None
-        nearest_node = self.knight.path_graph.get_nearest_node(self.knight.position)
+        nearest_node = self.path_graph.get_nearest_node(self.knight.position)
 
-        self.path = pathFindAStar(self.knight.path_graph, \
+        self.path = pathFindAStar(self.path_graph, \
                                   nearest_node, \
-                                  self.knight.path_graph.nodes[self.knight.base.target_node_index])
+                                  self.path_graph.nodes[self.knight.true_target_index])
 
         
         self.path_length = len(self.path)
-
+        print(str(len(self.path)))
         if (self.path_length > 0):
             self.current_connection = 0
             self.knight.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.knight.move_target.position = self.knight.path_graph.nodes[self.knight.base.target_node_index].position
+            self.knight.move_target.position = self.path_graph.nodes[self.knight.true_target_index].position
+
     def exit_actions(self):
         self.knight.positions["pos1"] = Vector2(self.knight.position.x, self.knight.position.y)
-        print(str(self.knight.positions["pos1"]))
         # check if opponent is in range
         nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
         if nearest_opponent is not None:

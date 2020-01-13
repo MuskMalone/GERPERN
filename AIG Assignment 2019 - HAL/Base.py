@@ -62,16 +62,16 @@ class BaseState(State):
             self.base.current_spawn_cooldown = self.base.spawn_cooldown
 
             # spawn orc
-            #orc = Orc(self.base.world, self.base.orc_image, self.base, Vector2(self.base.spawn_position))
-            #orc.brain.set_state("seeking")
-            #orc.max_hp = ORC_MAX_HP
-            #orc.maxSpeed = ORC_MAX_SPEED
-            #orc.min_target_distance = ORC_MIN_TARGET_DISTANCE
-            #orc.melee_damage = ORC_MELEE_DAMAGE
-            #orc.melee_cooldown = ORC_MELEE_COOLDOWN
-            #orc.current_hp = orc.max_hp
-            #orc.team_id = self.base.team_id
-            #self.base.world.add_entity(orc)
+            orc = Orc(self.base.world, self.base.orc_image, self.base, Vector2(self.base.spawn_position))
+            orc.brain.set_state("seeking")
+            orc.max_hp = ORC_MAX_HP
+            orc.maxSpeed = ORC_MAX_SPEED
+            orc.min_target_distance = ORC_MIN_TARGET_DISTANCE
+            orc.melee_damage = ORC_MELEE_DAMAGE
+            orc.melee_cooldown = ORC_MELEE_COOLDOWN
+            orc.current_hp = orc.max_hp
+            orc.team_id = self.base.team_id
+            self.base.world.add_entity(orc)
 
         if self.base.current_ranged_cooldown > 0:
             return

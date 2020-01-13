@@ -56,7 +56,7 @@ class ArcherStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.archer = archer
 
-        self.archer.path_graph = self.archer.world.paths[randint(0, len(self.archer.world.paths)-1)]
+        self.archer.path_graph = self.archer.world.paths[0]#randint(0, len(self.archer.world.paths)-1)]
 
 
     def do_actions(self):
