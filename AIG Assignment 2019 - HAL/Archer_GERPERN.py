@@ -17,6 +17,7 @@ class Archer_GERPERN(Character):
         self.base = base
         self.position = position
         self.move_target = GameEntity(world, "archer_move_target", None)
+        #self.safe_pos
         self.target = None
 
         self.maxSpeed = 50
@@ -24,12 +25,15 @@ class Archer_GERPERN(Character):
         self.projectile_range = 100
         self.projectile_speed = 100
 
+        self.attacked = "false"
         seeking_state = ArcherStateSeeking_GERPERN(self)
         attacking_state = ArcherStateAttacking_GERPERN(self)
         ko_state = ArcherStateKO_GERPERN(self)
+        kiting_state = ArcherStateKiting_GERPERN(self)
 
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
+        self.brain.add_state(kiting_state)
         self.brain.add_state(ko_state)
 
         self.brain.set_state("seeking")
@@ -47,6 +51,62 @@ class Archer_GERPERN(Character):
         if self.can_level_up():
             choice = randint(0, len(level_up_stats) - 1)
             self.level_up(level_up_stats[choice])   
+
+
+class ArcherStateKiting_GERPERN(State):
+
+    def __init__(self, archer):
+        print("kiting now")
+        State.__init__(self, "kiting")
+        self.archer = archer
+
+        self.archer.path_graph = self.archer.world.paths[randint(0, len(self.archer.world.paths)-1)]
+
+
+    def do_actions(self):
+
+        self.archer.velocity = self.archer.move_target.position - self.archer.position
+        if self.archer.velocity.length() > 0:
+            self.archer.velocity.normalize_ip();
+            self.archer.velocity *= self.archer.maxSpeed
+
+
+    def check_conditions(self):
+
+        if self.current_connection >= self.path_length:
+            return "attacking"
+            
+        if (self.archer.position - self.archer.move_target.position).length() < 8:
+
+            # continue on path
+            if self.current_connection < self.path_length:
+                self.archer.move_target.position = self.path[self.current_connection].toNode.position
+                self.current_connection += 1
+            
+            
+        return None
+
+    def entry_actions(self):
+
+        nearest_node = self.archer.path_graph.get_nearest_node(self.archer.position)
+        archer_x, archer_y = self.archer.position
+        enemy_x, enemy_y = self.archer.target.position
+        safe_x = ((archer_x-enemy_x)/ abs(archer_x-enemy_x))
+        safe_y = ((archer_y-enemy_y)/ abs(archer_y-enemy_y))
+        safe_node = self.archer.path_graph.get_nearest_node(Vector2(safe_x,safe_y))      
+        self.path = pathFindAStar(self.archer.path_graph, \
+                                  nearest_node, \
+                                  safe_node)
+
+        
+        self.path_length = len(self.path)
+
+        if (self.path_length > 0):
+            self.current_connection = 0
+            self.archer.move_target.position = self.path[0].fromNode.position
+
+        #else:
+            #self.archer.move_target.position = self.archer.path_graph.nodes[self.archer.base.target_node_index].position
 
 
 class ArcherStateSeeking_GERPERN(State):
@@ -87,7 +147,7 @@ class ArcherStateSeeking_GERPERN(State):
         return None
 
     def entry_actions(self):
-
+        
         nearest_node = self.archer.path_graph.get_nearest_node(self.archer.position)
 
         self.path = pathFindAStar(self.archer.path_graph, \
@@ -108,7 +168,7 @@ class ArcherStateSeeking_GERPERN(State):
 class ArcherStateAttacking_GERPERN(State):
 
     def __init__(self, archer):
-
+        
         State.__init__(self, "attacking")
         self.archer = archer
 
@@ -121,6 +181,8 @@ class ArcherStateAttacking_GERPERN(State):
             self.archer.velocity = Vector2(0, 0)
             if self.archer.current_ranged_cooldown <= 0:
                 self.archer.ranged_attack(self.archer.target.position)
+                self.archer.attacked = "True"
+                
 
         else:
             self.archer.velocity = self.archer.target.position - self.archer.position
@@ -130,6 +192,11 @@ class ArcherStateAttacking_GERPERN(State):
 
 
     def check_conditions(self):
+
+        if self.archer.attacked == "True":
+            self.archer.attacked = "false"
+            print("time to kite")
+            return "kiting"
 
         # target is gone
         if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
