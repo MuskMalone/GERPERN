@@ -279,7 +279,6 @@ class KnightStateDodging_GERPERN(State):
 
         #check if hes dodged
         if self.dodged is False and (self.knight.position - self.dodge_position).length() <= 5:
-            self.knight.velocity = Vector2(0,0)
             self.dodge_target = self.og_position
             self.dodged = True
         if self.knight.velocity == Vector2(0,0):
@@ -313,7 +312,7 @@ class KnightStateDodging_GERPERN(State):
         self.dodge_target = self.dodge_position
 
     def exit_actions(self):
-        self.knight.dodge_cooldown = 3 #set the dodging cooldown
+        self.knight.dodge_cooldown = 0. #set the dodging cooldown
         return None
 
 
