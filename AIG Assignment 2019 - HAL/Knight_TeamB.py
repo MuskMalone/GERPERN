@@ -56,7 +56,7 @@ class KnightStateSeeking_TeamB(State):
         State.__init__(self, "seeking")
         self.knight = knight
 
-        self.knight.path_graph = self.knight.world.paths[2]
+        self.knight.path_graph = self.knight.world.paths[randint(0, len(self.knight.world.paths)-1)]
 
 
     def do_actions(self):

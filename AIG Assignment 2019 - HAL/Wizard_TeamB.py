@@ -57,7 +57,7 @@ class WizardStateSeeking_TeamB(State):
         State.__init__(self, "seeking")
         self.wizard = wizard
 
-        self.wizard.path_graph = self.wizard.world.paths[3]
+        self.wizard.path_graph = self.wizard.world.paths[randint(0, len(self.wizard.world.paths)-1)]
         
 
     def do_actions(self):
