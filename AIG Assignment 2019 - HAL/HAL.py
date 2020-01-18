@@ -16,9 +16,9 @@ from Orc import *
 from Tower import *
 from Base import *
 
-#from Knight_TeamA import *
-from Archer_TeamA import *
-#from Wizard_TeamA import *
+from Knight_GERPERN import *
+#from Archer_GERPERN import *
+from Wizard_GERPERN import *
 
 from Knight_TeamB import *
 from Archer_TeamB import *
@@ -266,11 +266,11 @@ def run():
     blue_orc_image = pygame.image.load("assets/blue_orc_32_32.png").convert_alpha()
     blue_tower_image = pygame.image.load("assets/blue_tower.png").convert_alpha()
     blue_rock_image = pygame.image.load("assets/blue_rock.png").convert_alpha()
-    #blue_knight_image = pygame.image.load("assets/blue_knight_32_32.png").convert_alpha()
+    blue_knight_image = pygame.image.load("assets/blue_knight_32_32.png").convert_alpha()
     blue_archer_image = pygame.image.load("assets/blue_archer_32_32.png").convert_alpha()
     blue_arrow_image = pygame.image.load("assets/blue_arrow.png").convert_alpha()
-    #blue_wizard_image = pygame.image.load("assets/blue_wizard_32_32.png").convert_alpha()
-    #blue_explosion_image = pygame.image.load("assets/blue_explosion.png").convert_alpha()
+    blue_wizard_image = pygame.image.load("assets/blue_wizard_32_32.png").convert_alpha()
+    blue_explosion_image = pygame.image.load("assets/blue_explosion.png").convert_alpha()
 
     red_base_image = pygame.image.load("assets/red_base.png").convert_alpha()
     red_orc_image = pygame.image.load("assets/red_orc_32_32.png").convert_alpha()
@@ -329,38 +329,38 @@ def run():
     blue_tower_2.brain.set_state("tower_state")
     world.add_entity(blue_tower_2)
 
-    #blue_knight = Knight_TeamA(world, blue_knight_image, blue_base, Vector2(blue_base.spawn_position))
-    #blue_knight.team_id = 0
-    #blue_knight.max_hp = KNIGHT_MAX_HP
-    #blue_knight.min_target_distance = KNIGHT_MIN_TARGET_DISTANCE
-##    blue_knight.melee_damage = KNIGHT_MELEE_DAMAGE
-##    blue_knight.melee_cooldown = KNIGHT_MELEE_COOLDOWN
-##    blue_knight.current_hp = blue_knight.max_hp
-##    #world.add_entity(blue_knight)
+    blue_knight = Knight_GERPERN(world, blue_knight_image, blue_base, Vector2(blue_base.spawn_position))
+    blue_knight.team_id = 0
+    blue_knight.max_hp = KNIGHT_MAX_HP
+    blue_knight.min_target_distance = KNIGHT_MIN_TARGET_DISTANCE
+    blue_knight.melee_damage = KNIGHT_MELEE_DAMAGE
+    blue_knight.melee_cooldown = KNIGHT_MELEE_COOLDOWN
+    blue_knight.current_hp = blue_knight.max_hp
+    world.add_entity(blue_knight)
 
-    blue_archer = Archer_TeamA(world, blue_archer_image, blue_arrow_image, blue_base, Vector2(blue_base.spawn_position))
-    blue_archer.team_id = 0
-    blue_archer.max_hp = ARCHER_MAX_HP
-    blue_archer.maxSpeed = ARCHER_MAX_SPEED
-    blue_archer.min_target_distance = ARCHER_MIN_TARGET_DISTANCE
-    blue_archer.projectile_range = ARCHER_PROJECTILE_RANGE
-    blue_archer.projectile_speed = ARCHER_PROJECTILE_SPEED
-    blue_archer.ranged_damage = ARCHER_RANGED_DAMAGE
-    blue_archer.ranged_cooldown = ARCHER_RANGED_COOLDOWN
-    blue_archer.current_hp = blue_archer.max_hp
-    world.add_entity(blue_archer)
-##
-##    blue_wizard = Wizard_TeamA(world, blue_wizard_image, blue_rock_image, blue_base, Vector2(blue_base.spawn_position), blue_explosion_image)
-##    blue_wizard.team_id = 0
-##    blue_wizard.max_hp = WIZARD_MAX_HP
-##    blue_wizard.maxSpeed = WIZARD_MAX_SPEED
-##    blue_wizard.min_target_distance = WIZARD_MIN_TARGET_DISTANCE
-##    blue_wizard.projectile_range = WIZARD_PROJECTILE_RANGE
-##    blue_wizard.projectile_speed = WIZARD_PROJECTILE_SPEED
-##    blue_wizard.ranged_damage = WIZARD_RANGED_DAMAGE
-##    blue_wizard.ranged_cooldown = WIZARD_RANGED_COOLDOWN
-##    blue_wizard.current_hp = blue_wizard.max_hp
-    #world.add_entity(blue_wizard)
+    #blue_archer = Archer_GERPERN(world, blue_archer_image, blue_arrow_image, blue_base, Vector2(blue_base.spawn_position))
+    #blue_archer.team_id = 0
+    #blue_archer.max_hp = ARCHER_MAX_HP
+    #blue_archer.maxSpeed = ARCHER_MAX_SPEED
+    #blue_archer.min_target_distance = ARCHER_MIN_TARGET_DISTANCE
+    #blue_archer.projectile_range = ARCHER_PROJECTILE_RANGE
+    #blue_archer.projectile_speed = ARCHER_PROJECTILE_SPEED
+    #blue_archer.ranged_damage = ARCHER_RANGED_DAMAGE
+    #blue_archer.ranged_cooldown = ARCHER_RANGED_COOLDOWN
+    #blue_archer.current_hp = blue_archer.max_hp
+    #world.add_entity(blue_archer)
+
+    blue_wizard = Wizard_GERPERN(world, blue_wizard_image, blue_rock_image, blue_base, Vector2(blue_base.spawn_position), blue_explosion_image)
+    blue_wizard.team_id = 0
+    blue_wizard.max_hp = WIZARD_MAX_HP
+    blue_wizard.maxSpeed = WIZARD_MAX_SPEED
+    blue_wizard.min_target_distance = WIZARD_MIN_TARGET_DISTANCE
+    blue_wizard.projectile_range = WIZARD_PROJECTILE_RANGE
+    blue_wizard.projectile_speed = WIZARD_PROJECTILE_SPEED
+    blue_wizard.ranged_damage = WIZARD_RANGED_DAMAGE
+    blue_wizard.ranged_cooldown = WIZARD_RANGED_COOLDOWN
+    blue_wizard.current_hp = blue_wizard.max_hp
+    world.add_entity(blue_wizard)
 
 
     # --- Initialize Red buildings and units ---
@@ -403,15 +403,15 @@ def run():
     red_tower_2.brain.set_state("tower_state")
     world.add_entity(red_tower_2)
 
-##    red_knight = Knight_TeamB(world, red_knight_image, red_base, Vector2(red_base.spawn_position))
-##    red_knight.team_id = 1
-##    red_knight.max_hp = KNIGHT_MAX_HP * RED_MULTIPLIER
-##    red_knight.min_target_distance = KNIGHT_MIN_TARGET_DISTANCE
-##    red_knight.melee_damage = KNIGHT_MELEE_DAMAGE * RED_MULTIPLIER
-##    red_knight.melee_cooldown = KNIGHT_MELEE_COOLDOWN
-##    red_knight.current_hp = red_knight.max_hp
-##    world.add_entity(red_knight)
-##
+    red_knight = Knight_TeamB(world, red_knight_image, red_base, Vector2(red_base.spawn_position))
+    red_knight.team_id = 1
+    red_knight.max_hp = KNIGHT_MAX_HP * RED_MULTIPLIER
+    red_knight.min_target_distance = KNIGHT_MIN_TARGET_DISTANCE
+    red_knight.melee_damage = KNIGHT_MELEE_DAMAGE * RED_MULTIPLIER
+    red_knight.melee_cooldown = KNIGHT_MELEE_COOLDOWN
+    red_knight.current_hp = red_knight.max_hp
+    world.add_entity(red_knight)
+
     red_archer = Archer_TeamB(world, red_archer_image, red_arrow_image, red_base, Vector2(red_base.spawn_position))
     red_archer.team_id = 1
     red_archer.max_hp = ARCHER_MAX_HP * RED_MULTIPLIER
@@ -424,18 +424,18 @@ def run():
     red_archer.current_hp = red_archer.max_hp
     world.add_entity(red_archer)
 
-##    red_wizard = Wizard_TeamB(world, red_wizard_image, red_rock_image, red_base, Vector2(red_base.spawn_position), red_explosion_image)
-##    red_wizard.team_id = 1
-##    red_wizard.max_hp = WIZARD_MAX_HP * RED_MULTIPLIER
-##    red_wizard.maxSpeed = WIZARD_MAX_SPEED
-##    red_wizard.min_target_distance = WIZARD_MIN_TARGET_DISTANCE
-##    red_wizard.projectile_range = WIZARD_PROJECTILE_RANGE
-##    red_wizard.projectile_speed = WIZARD_PROJECTILE_SPEED
-##    red_wizard.ranged_damage = WIZARD_RANGED_DAMAGE * RED_MULTIPLIER
-##    red_wizard.ranged_cooldown = WIZARD_RANGED_COOLDOWN
-##    red_wizard.current_hp = red_wizard.max_hp
-##    world.add_entity(red_wizard)
-##    
+    red_wizard = Wizard_TeamB(world, red_wizard_image, red_rock_image, red_base, Vector2(red_base.spawn_position), red_explosion_image)
+    red_wizard.team_id = 1
+    red_wizard.max_hp = WIZARD_MAX_HP * RED_MULTIPLIER
+    red_wizard.maxSpeed = WIZARD_MAX_SPEED
+    red_wizard.min_target_distance = WIZARD_MIN_TARGET_DISTANCE
+    red_wizard.projectile_range = WIZARD_PROJECTILE_RANGE
+    red_wizard.projectile_speed = WIZARD_PROJECTILE_SPEED
+    red_wizard.ranged_damage = WIZARD_RANGED_DAMAGE * RED_MULTIPLIER
+    red_wizard.ranged_cooldown = WIZARD_RANGED_COOLDOWN
+    red_wizard.current_hp = red_wizard.max_hp
+    world.add_entity(red_wizard)
+    
 
     # --- Initialize other entities in the world ---
     mountain_1 = Obstacle(world, mountain_image_1)

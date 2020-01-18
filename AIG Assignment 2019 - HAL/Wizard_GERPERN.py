@@ -39,6 +39,8 @@ class Wizard_GERPERN(Character):
 
         self.brain.set_state("seeking")
 
+
+
     def render(self, surface):
 
         Character.render(self, surface)
@@ -52,6 +54,7 @@ class Wizard_GERPERN(Character):
         if self.can_level_up():
             choice = randint(0, len(level_up_stats) - 1)
             self.level_up(level_up_stats[choice])      
+
 
 
 class WizardStateSeeking_GERPERN(State):
@@ -130,36 +133,6 @@ class WizardStateSeeking_GERPERN(State):
         else:
             self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.base.target_node_index].position
 
-##def laneCheck(self):
-##    topLane = 0
-##    midLane1 = 0
-##    midLane2 = 0
-##    bottomLane = 0
-##    knightExists = False
-##
-##    for entity in self.world.entities.values():
-##
-##        if entity.ko:
-##            continue
-##
-##        if entity.team_id == self.team_id and entity.name = "orc":
-##            if entity.path_graph == self.world.paths[0]:
-##                topLane +=1
-##            elif entity.path_graph == self.world.paths[1]:
-##                bottomLane += 1
-##            elif entity.path_graph == self.world.paths[2]:
-##                midLane2 += 1
-##            else:
-##                midLane1 += 1:
-##        
-##        elif entity.team_id == self.team_id and entity.name = "knight":
-##            knightPath = entity.path_graph
-##
-##        # If equal no. of Orcs in each lane, look for Knight
-##        if (topLane == midLane1 == midLane2 == bottomLane) and knightExists:
-##            return 
-##
-##    laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
 
 def targetListUpdate(self):
 
