@@ -59,13 +59,13 @@ class Knight_GERPERN(Character):
         self.melee_cooldown = 2.
         self.true_target_index = 0
         if self.base.spawn_node_index == 0:
-            self.true_target_index = 24
+            self.true_target_index = 22
         elif self.base.spawn_node_index == 4:
             self.true_target_index = 0
 
         self.currentLane = None
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("knight_paths.txt")
+        self.generate_pathfinding_graphs("improved_knight_paths.txt")
 
         #state decision diagram
         self.fleeingNode = Decision(message = "fleeing", nodeType = "answer", knight = self) #fleeing state

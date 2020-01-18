@@ -33,10 +33,11 @@ class Wizard_GERPERN(Character):
         self.currentLane = None
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("knight_paths.txt")
+        self.generate_pathfinding_graphs("improved_knight_paths.txt")
+
         self.new_index = 0
         if self.base.spawn_node_index == 0:
-            self.new_index = 24
+            self.new_index = 22
         elif self.base.spawn_node_index == 4:
             self.new_index = 0
 
@@ -59,6 +60,12 @@ class Wizard_GERPERN(Character):
         self.graph.render(surface)
         Character.render(self, surface)
 
+        font = pygame.font.SysFont("arial", 24, True)
+        for x in self.graph.nodes:
+            i = self.graph.nodes[x]
+            i_x,i_y = i.position
+            coord = font.render(str(i_x)+ ","+ str(i_y), True, (255, 255, 255))
+            surface.blit(coord, (i_x, i_y))
 
     def process(self, time_passed):
         
@@ -407,8 +414,6 @@ def findBestTarget(directionToCheck, bestTargetSoFar, numOfTargets, totalHP, sel
 
     # First Iteration - Check if midpoint can hit all targets
     if bestTargetSoFar == None:
-        if len(self.targetList) == 1:
-            return self.targetList[0].position
 
         xTotal = 0
         yTotal = 0
@@ -429,7 +434,7 @@ def findBestTarget(directionToCheck, bestTargetSoFar, numOfTargets, totalHP, sel
                 targetsInRange += 1
 
         if targetsInRange == targetListUpdate(self):
-            print("targets:",targetsInRange,"totalTargeets:",len(self.targetList))
+            print("midpoint:",midpoint,"totalTargets:",len(self.targetList))
             return midpoint
         else:
             return findBestTarget(0, midpoint, targetsInRange, totalTargetHP, self)
