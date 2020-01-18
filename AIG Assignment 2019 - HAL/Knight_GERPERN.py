@@ -63,6 +63,7 @@ class Knight_GERPERN(Character):
         elif self.base.spawn_node_index == 4:
             self.true_target_index = 0
 
+        self.currentLane = None
         self.graph = Graph(self)
         self.generate_pathfinding_graphs("knight_paths.txt")
 
@@ -219,7 +220,7 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(0, 1)]
+        self.path_graph = self.knight.paths[randint(2,3)]
 
 
     def do_actions(self):
@@ -302,7 +303,7 @@ class KnightStateDodging_GERPERN(State):
 
     def check_conditions(self):
 
-        print(str(self.pos) + "before")
+        #print(str(self.pos) + "before")
         #check if hes dodged
         if self.dodged is False and (self.knight.position - self.dodge_position).length() <= 5:
             self.dodge_target = self.og_position
@@ -318,7 +319,7 @@ class KnightStateDodging_GERPERN(State):
             if state != self.knight.brain.active_state.name:
                 return state
         self.pos = Vector2(self.knight.position.x, self.knight.position.y)
-        print(str(self.pos) + "after")
+        #print(str(self.pos) + "after")
         return None
 
 
@@ -348,7 +349,9 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(0, 1)]
+        pathChosen = randint(2,3)
+        self.path_graph = self.knight.paths[pathChosen]
+        self.knight.currentLane = pathChosen
 
     def do_actions(self):
 

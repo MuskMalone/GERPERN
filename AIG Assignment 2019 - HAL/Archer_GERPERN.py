@@ -110,7 +110,7 @@ class Archer_GERPERN(Character):
                     LanePosition = "HexagonArea"
                 else:
                     LanePosition = "midPath"
-        print("LP: ",LanePosition)
+        #print("LP: ",LanePosition)
         return Lane,LanePosition
 
     def MovetoSafeLocation_Safe(self,A_Lane,A_LanePos):
@@ -338,8 +338,8 @@ class ArcherStateKiting_GERPERN(State):
             
 
     def entry_actions(self):
-        print("Kite_position",self.archer.kite_position)
-        print("normal_position",self.archer.normal_pos)
+        #print("Kite_position",self.archer.kite_position)
+        #print("normal_position",self.archer.normal_pos)
         if self.archer.target == None:
             self.archer.kite_position = self.archer.normal_pos
             self.archer.velocity = self.archer.kite_position - self.archer.position
