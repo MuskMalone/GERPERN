@@ -159,13 +159,6 @@ class World(object):
         # draw the scores
         font = pygame.font.SysFont("arial", 24, True)
         
-        #Draw nodes' coordinate
-        #for x in self.graph.nodes:
-        #    i = self.graph.nodes[x]
-        #    i_x,i_y = i.position
-        #    coord = font.render(str(i_x)+ ","+ str(i_y), True, (255, 255, 255))
-        #    surface.blit(coord, (i_x, i_y))
-
         blue_score = font.render(TEAM_NAME[0] + " score = " + str(self.scores[0]), True, (0, 0, 255))
         surface.blit(blue_score, (150, 10))
 
