@@ -352,7 +352,7 @@ def run():
 
     blue_wizard = Wizard_GERPERN(world, blue_wizard_image, blue_rock_image, blue_base, Vector2(blue_base.spawn_position), blue_explosion_image)
     blue_wizard.team_id = 0
-    blue_wizard.max_hp = WIZARD_MAX_HP
+    blue_wizard.max_hp = 1#WIZARD_MAX_HP
     blue_wizard.maxSpeed = WIZARD_MAX_SPEED
     blue_wizard.min_target_distance = WIZARD_MIN_TARGET_DISTANCE
     blue_wizard.projectile_range = WIZARD_PROJECTILE_RANGE

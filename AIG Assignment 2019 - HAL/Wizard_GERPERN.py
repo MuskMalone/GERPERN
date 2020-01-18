@@ -48,7 +48,7 @@ class Wizard_GERPERN(Character):
         self.brain.add_state(attacking_state)
         self.brain.add_state(ko_state)
 
-        self.brain.set_state("seeking")
+        self.brain.set_state("meditating")
 
     def render(self, surface):
 
@@ -127,7 +127,8 @@ class WizardStateMeditating_GERPERN(State):
         self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
 
     def do_actions(self):
-        
+        print("Wizard_GERPERN is meditating, gaining immense knowledge and waiting for the right moment to strike")
+
         # Check if HP is full
         if self.wizard.current_hp != self.wizard.max_hp:
 
@@ -264,7 +265,7 @@ def laneCheck(self):
             else:
                 midLane1 += 1
         
-        if entity.team_id == self.team_id and entity.name == "knight":
+        elif entity.team_id == self.team_id and entity.name == "knight":
             knightExists = True
             knightPath = entity.path_graph
             if knightPath == self.paths[0]:
@@ -276,11 +277,16 @@ def laneCheck(self):
             else:
                 pathToTake = 3
 
-        # If equal no. of Orcs in each lane, look for Knight
-        if (topLane == midLane1 == midLane2 == bottomLane) and knightExists:
+        # If Knight exists, go to same lane
+        if knightExists:
             print("Following Knight")
             return pathToTake
 
+        # If all lanes have same no. of Orcs, return None
+        elif (topLane == midLane1 == midLane2 == bottomLane):
+            return None
+
+        # Else return lane with most Orcs
         else:
             laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
             print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
@@ -434,7 +440,6 @@ class WizardStateKO_GERPERN(State):
         if self.wizard.current_respawn_time <= 0:
             self.wizard.current_respawn_time = self.wizard.respawn_time
             self.wizard.ko = False
-            self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
             return "seeking"
             
         return None
