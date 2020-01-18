@@ -348,7 +348,7 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        self.path_graph = self.knight.paths[2]#randint(0, 1)]
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
 
     def do_actions(self):
