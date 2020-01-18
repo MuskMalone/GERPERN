@@ -96,7 +96,7 @@ class Knight_GERPERN(Character):
 
     def render(self, surface):
 
-        self.graph.render(surface)
+        #self.graph.render(surface)
         Character.render(self, surface)
         if self.target:
             pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
@@ -348,8 +348,7 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        self.path_graph = self.knight.paths[1]#randint(0, 1)]
-
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
     def do_actions(self):
 

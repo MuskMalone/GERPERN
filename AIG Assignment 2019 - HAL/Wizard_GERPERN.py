@@ -52,7 +52,7 @@ class Wizard_GERPERN(Character):
 
     def render(self, surface):
 
-        self.graph.render(surface)
+        #self.graph.render(surface)
         Character.render(self, surface)
 
 
@@ -127,6 +127,7 @@ class WizardStateMeditating_GERPERN(State):
         self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
 
     def do_actions(self):
+
         print("Wizard_GERPERN is meditating, gaining immense knowledge and waiting for the right moment to strike")
 
         # Check if HP is full
@@ -264,7 +265,7 @@ def laneCheck(self):
                 midLane2 += 1
             else:
                 midLane1 += 1
-        
+
         elif entity.team_id == self.team_id and entity.name == "knight":
             knightExists = True
             knightPath = entity.path_graph
