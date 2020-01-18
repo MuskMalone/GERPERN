@@ -28,6 +28,15 @@ class Wizard_GERPERN(Character):
         self.explosion_radius = self.explosion_image.get_width()/2
         self.targetList = []
         self.trueTarget = None
+        self.level = 0
+
+        self.graph = Graph(self)
+        self.generate_pathfinding_graphs("knight_paths.txt")
+        self.new_index = 0
+        if self.base.spawn_node_index == 0:
+            self.new_index = 24
+        elif self.base.spawn_node_index == 4:
+            self.new_index = 0
 
         seeking_state = WizardStateSeeking_GERPERN(self)
         attacking_state = WizardStateAttacking_GERPERN(self)
@@ -39,10 +48,9 @@ class Wizard_GERPERN(Character):
 
         self.brain.set_state("seeking")
 
-
-
     def render(self, surface):
 
+        self.graph.render(surface)
         Character.render(self, surface)
 
 
@@ -50,11 +58,61 @@ class Wizard_GERPERN(Character):
         
         Character.process(self, time_passed)
         
-        level_up_stats = ["hp", "speed", "ranged damage", "ranged cooldown", "projectile range"]
+        level_up_stats = ["ranged cooldown", "ranged damage", "hp", "speed", "projectile range"]
         if self.can_level_up():
-            choice = randint(0, len(level_up_stats) - 1)
-            self.level_up(level_up_stats[choice])      
+            if self.level < 3:
+                self.level_up(level_up_stats[0])
+            else:
+                self.level_up(level_up_stats[1])         
+            
+            self.level += 1
 
+    def generate_pathfinding_graphs(self, filename):
+
+        f = open(filename, "r")
+
+        # Create the nodes
+        line = f.readline()
+        while line != "connections\n":
+            data = line.split()
+            self.graph.nodes[int(data[0])] = Node(self.graph, int(data[0]), int(data[1]), int(data[2]))
+            line = f.readline()
+
+        # Create the connections
+        line = f.readline()
+        while line != "paths\n":
+            data = line.split()
+            node0 = int(data[0])
+            node1 = int(data[1])
+            distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+            self.graph.nodes[node0].addConnection(self.graph.nodes[node1], distance)
+            self.graph.nodes[node1].addConnection(self.graph.nodes[node0], distance)
+            line = f.readline()
+
+        # Create the orc paths, which are also Graphs
+        self.paths = []
+        line = f.readline()
+        while line != "":
+            path = Graph(self)
+            data = line.split()
+            
+            # Create the nodes
+            for i in range(0, len(data)):
+                node = self.graph.nodes[int(data[i])]
+                path.nodes[int(data[i])] = Node(path, int(data[i]), node.position[0], node.position[1])
+
+            # Create the connections
+            for i in range(0, len(data)-1):
+                node0 = int(data[i])
+                node1 = int(data[i + 1])
+                distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+                path.nodes[node0].addConnection(path.nodes[node1], distance)
+                path.nodes[node1].addConnection(path.nodes[node0], distance)
+                
+            self.paths.append(path)
+            line = f.readline()
+
+        f.close()
 
 
 class WizardStateSeeking_GERPERN(State):
@@ -64,7 +122,7 @@ class WizardStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.wizard = wizard
 
-        self.wizard.path_graph = self.wizard.world.paths[randint(0, len(self.wizard.world.paths)-1)]
+        self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
         
 
     def do_actions(self):
@@ -118,10 +176,10 @@ class WizardStateSeeking_GERPERN(State):
     def entry_actions(self):
         print("seeking")
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
-
+        print(len(self.wizard.path_graph.nodes))
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                  self.wizard.path_graph.nodes[self.wizard.base.target_node_index])
+                                  self.wizard.path_graph.nodes[self.wizard.new_index])
 
         
         self.path_length = len(self.path)
@@ -131,8 +189,51 @@ class WizardStateSeeking_GERPERN(State):
             self.wizard.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.base.target_node_index].position
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
 
+def laneCheck(self):
+    topLane = 0
+    midLane1 = 0
+    midLane2 = 0
+    bottomLane = 0
+    knightExists = False
+    pathToTake = None
+
+    for entity in self.world.entities.values():
+
+        if entity.ko:
+            continue
+
+        if entity.team_id == self.team_id and entity.name == "orc":
+            if entity.path_graph == self.world.paths[0]:
+                topLane +=1
+            elif entity.path_graph == self.world.paths[1]:
+                bottomLane += 1
+            elif entity.path_graph == self.world.paths[2]:
+                midLane2 += 1
+            else:
+                midLane1 += 1
+        
+        if entity.team_id == self.team_id and entity.name == "knight":
+            knightExists = True
+            knightPath = entity.path_graph
+            if knightPath == self.world.paths[0]:
+                pathToTake = 0
+            elif knightPath == self.world.paths[1]:
+                pathToTake = 1
+            elif knightPath == self.world.paths[2]:
+                pathToTake = 2
+            else:
+                pathToTake = 3
+
+        # If equal no. of Orcs in each lane, look for Knight
+        if (topLane == midLane1 == midLane2 == bottomLane) and knightExists:
+            print("Following Knight")
+            return pathToTake
+        else:
+            laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
+            print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
+            return int(laneDic.get(max(laneDic)))
 
 def targetListUpdate(self):
 
