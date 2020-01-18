@@ -38,10 +38,12 @@ class Wizard_GERPERN(Character):
         elif self.base.spawn_node_index == 4:
             self.new_index = 0
 
+        meditating_state = WizardStateMeditating_GERPERN(self)
         seeking_state = WizardStateSeeking_GERPERN(self)
         attacking_state = WizardStateAttacking_GERPERN(self)
         ko_state = WizardStateKO_GERPERN(self)
 
+        self.brain.add_state(meditating_state)
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
         self.brain.add_state(ko_state)
@@ -115,6 +117,50 @@ class Wizard_GERPERN(Character):
         f.close()
 
 
+class WizardStateMeditating_GERPERN(State):
+
+    def __init__(self, wizard):
+
+        State.__init__(self, "meditating")
+        self.wizard = wizard
+
+        self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
+
+    def do_actions(self):
+        
+        # Check if HP is full
+        if self.wizard.current_hp != self.wizard.max_hp:
+
+            nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
+            if self.wizard.current_hp/self.wizard.max_hp < 0.3 or (toBePosition - nearest_opponent.position).length() > self.wizard.min_target_distance:
+                self.wizard.heal()
+
+    def check_conditions(self):
+        
+        if laneCheck(self.wizard) != None:
+            return "seeking"
+
+        return None
+
+    def entry_actions(self):
+        print("meditating")
+        nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
+        print(len(self.wizard.path_graph.nodes))
+        self.path = pathFindAStar(self.wizard.path_graph, \
+                                  nearest_node, \
+                                   self.wizard.path_graph.nodes[self.wizard.new_index])
+
+        
+        self.path_length = len(self.path)
+
+        if (self.path_length > 0):
+            self.current_connection = 0
+            self.wizard.move_target.position = self.path[0].fromNode.position
+
+        else:
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
+
+
 class WizardStateSeeking_GERPERN(State):
 
     def __init__(self, wizard):
@@ -122,7 +168,11 @@ class WizardStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.wizard = wizard
 
-        self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
+        laneToEnter = laneCheck(self.wizard)
+        if laneToEnter != None:
+            self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
+        else:
+            return "meditating"
         
 
     def do_actions(self):
@@ -230,6 +280,7 @@ def laneCheck(self):
         if (topLane == midLane1 == midLane2 == bottomLane) and knightExists:
             print("Following Knight")
             return pathToTake
+
         else:
             laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
             print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
@@ -383,7 +434,7 @@ class WizardStateKO_GERPERN(State):
         if self.wizard.current_respawn_time <= 0:
             self.wizard.current_respawn_time = self.wizard.respawn_time
             self.wizard.ko = False
-            self.wizard.path_graph = self.wizard.world.paths[randint(0, len(self.wizard.world.paths)-1)]
+            self.wizard.path_graph = self.wizard.paths[laneCheck(self.wizard)]
             return "seeking"
             
         return None

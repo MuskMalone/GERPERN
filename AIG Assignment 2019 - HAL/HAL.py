@@ -336,7 +336,7 @@ def run():
     blue_knight.melee_damage = KNIGHT_MELEE_DAMAGE
     blue_knight.melee_cooldown = KNIGHT_MELEE_COOLDOWN
     blue_knight.current_hp = blue_knight.max_hp
-    world.add_entity(blue_knight)
+    #world.add_entity(blue_knight)
 
     #blue_archer = Archer_GERPERN(world, blue_archer_image, blue_arrow_image, blue_base, Vector2(blue_base.spawn_position))
     #blue_archer.team_id = 0
