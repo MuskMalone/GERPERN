@@ -179,7 +179,7 @@ class WizardStateSeeking_GERPERN(State):
         print(len(self.wizard.path_graph.nodes))
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                  self.wizard.path_graph.nodes[self.wizard.new_index])
+                                   self.wizard.path_graph.nodes[self.wizard.new_index])
 
         
         self.path_length = len(self.path)
@@ -217,11 +217,11 @@ def laneCheck(self):
         if entity.team_id == self.team_id and entity.name == "knight":
             knightExists = True
             knightPath = entity.path_graph
-            if knightPath == self.world.paths[0]:
+            if knightPath == self.paths[0]:
                 pathToTake = 0
-            elif knightPath == self.world.paths[1]:
+            elif knightPath == self.paths[1]:
                 pathToTake = 1
-            elif knightPath == self.world.paths[2]:
+            elif knightPath == self.paths[2]:
                 pathToTake = 2
             else:
                 pathToTake = 3
