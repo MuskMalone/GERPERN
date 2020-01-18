@@ -51,8 +51,6 @@ class Wizard_GERPERN(Character):
         self.brain.set_state("seeking")
 
     def render(self, surface):
-
-        self.graph.render(surface)
         Character.render(self, surface)
 
 

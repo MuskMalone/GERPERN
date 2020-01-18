@@ -95,11 +95,7 @@ class Knight_GERPERN(Character):
         
 
     def render(self, surface):
-
-        self.graph.render(surface)
         Character.render(self, surface)
-        if self.target:
-            pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
 
 
     def process(self, time_passed):
