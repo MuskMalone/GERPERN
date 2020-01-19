@@ -30,7 +30,14 @@ class Wizard_GERPERN(Character):
         self.trueTarget = None
         self.level = 0
         self.friendlyKnight = getKnight(self)
-        self.currentLane = None
+        self.opp_team_id = 1-self.base.team_id
+        self.currentPath = None
+        if self.base.team_id == 1:
+            self.planBPath = [4,1,5,2]
+        else:
+            self.planBPath = []
+
+        self.planB = False
 
         self.graph = Graph(self)
         self.generate_pathfinding_graphs("improved_knight_paths.txt")
@@ -44,12 +51,14 @@ class Wizard_GERPERN(Character):
         retreating_state = WizardStateRetreating_GERPERN(self)
         meditating_state = WizardStateMeditating_GERPERN(self)
         seeking_state = WizardStateSeeking_GERPERN(self)
+        defending_state = WizardStateDefending_GERPERN(self)
         attacking_state = WizardStateAttacking_GERPERN(self)
         ko_state = WizardStateKO_GERPERN(self)
 
         self.brain.add_state(retreating_state)
         self.brain.add_state(meditating_state)
         self.brain.add_state(seeking_state)
+        self.brain.add_state(defending_state)
         self.brain.add_state(attacking_state)
         self.brain.add_state(ko_state)
 
@@ -168,20 +177,25 @@ class WizardStateRetreating_GERPERN(State):
                 self.current_connection += 1
 
         nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
-        if (nearest_opponent.position - self.wizard.position).length() >= (self.wizard.min_target_distance*0.9) and self.wizard.current_hp/self.wizard.max_hp >= 0.7:
+        nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
+        if nearest_node == self.wizard.path_graph.nodes[self.wizard.new_index] and targetListUpdate(self.wizard) == 0:
+            self.wizard.target = None
+            return "seeking"
+
+        elif (nearest_opponent.position - self.wizard.position).length() >= (self.wizard.min_target_distance*0.8) and self.wizard.current_hp/self.wizard.max_hp >= 0.6:
             return "attacking"
             
-        elif self.wizard.current_hp/self.wizard.max_hp >= 0.7 and (self.wizard.world.get(self.wizard.target.id) is None or self.wizard.target.ko or targetListUpdate(self.wizard) == 0):
+        elif self.wizard.current_hp/self.wizard.max_hp >= 0.6 and (self.wizard.world.get(self.wizard.target.id) is None or self.wizard.target.ko or targetListUpdate(self.wizard) == 0):
             self.wizard.target = None
             return "seeking"
 
     def entry_actions(self):
-        print("retreating")
+        #print("retreating")
 
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                  self.wizard.path_graph.nodes[self.wizard.base.spawn_node_index])
+                                  self.wizard.path_graph.nodes[self.wizard.new_index])
         
         self.path_length = len(self.path)
 
@@ -203,35 +217,183 @@ class WizardStateMeditating_GERPERN(State):
     def do_actions(self):
 
         print("Wizard_GERPERN is meditating, gaining immense knowledge and waiting for the right moment to strike")
-
-        # Check if any target in range
-        if targetListUpdate(self.wizard) > 0:
-            self.wizard.target = self.wizard.targetList[0]
-            return "attacking"
-
         # Check if HP is full
         if self.wizard.current_hp != self.wizard.max_hp:
             self.wizard.heal()
 
     def check_conditions(self):
         
-        laneChosen = laneCheck(self.wizard)
-        if laneChosen != None:
-            self.wizard.path_graph = self.wizard.paths[laneChosen]
-            self.wizard.currentLane = laneChosen
-            return "seeking"
+        if self.wizard.planB != True:
+            # Check if any target in range
+            if targetListUpdate(self.wizard) > 0:
+                self.wizard.target = self.wizard.targetList[0]
+                return "attacking"
+        
+        else:
+            print("Wizard_GERPERN notices both his towers are down but points are higher than", TEAM_NAME[self.wizard.opp_team_id]+"'s")
+            print("Wizard_GERPERN will now defend and his team shall win by points instead!")
+            return "defending"
 
+        if self.wizard.planB != True:
+            laneChosen = laneCheck(self.wizard)
+
+            if teamTowerCount(self.wizard) == 0 and oppTowerCount(self.wizard) > teamTowerCount(self.wizard) and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
+                self.wizard.planB = True
+
+            if laneChosen != None:
+                self.wizard.path_graph = self.wizard.paths[laneChosen]
+                self.wizard.currentPath = laneChosen
+                return "seeking"
 
     def entry_actions(self):
-        print("meditating")
-        self.wizard.velocity = Vector2(0, 0) 
+        #print("meditating")
+        self.wizard.velocity = Vector2(0, 0)
 
+def teamTowerCount(self):
+    towerCount = 0
+    for entity in self.world.entities.values():
+        if entity.name == "tower" and entity.team_id == self.base.team_id:
+            towerCount += 1
+
+    return towerCount
+
+def oppTowerCount(self):
+    towerCount = 0
+    for entity in self.world.entities.values():
+        if entity.name == "tower" and entity.team_id == self.opp_team_id:
+            towerCount += 1
+
+    return towerCount
 
 class WizardStateSeeking_GERPERN(State):
 
     def __init__(self, wizard):
 
         State.__init__(self, "seeking")
+        self.wizard = wizard
+
+    def do_actions(self):
+        
+        self.wizard.velocity = self.wizard.move_target.position - self.wizard.position
+        if self.wizard.velocity.length() > 0:
+            self.wizard.velocity.normalize_ip();
+            self.wizard.velocity *= self.wizard.maxSpeed
+        toBePosition = self.wizard.position + 2*self.wizard.velocity
+
+        # Check if HP is full
+        if self.wizard.current_hp != self.wizard.max_hp:
+
+            nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
+            if self.wizard.current_hp/self.wizard.max_hp < 0.3 or (toBePosition - nearest_opponent.position).length() > self.wizard.min_target_distance:
+                self.wizard.heal()
+        
+        #self.wizard.planB = True
+        #self.wizard.current_hp = 0
+    def check_conditions(self):
+
+        # Check if any target in range
+        if targetListUpdate(self.wizard) > 0:
+            self.wizard.target = self.wizard.targetList[0]
+            return "attacking"
+        elif (self.wizard.position - self.wizard.move_target.position).length() < 8:
+            # continue on path
+            if self.current_connection < self.path_length:
+                self.wizard.move_target.position = self.path[self.current_connection].toNode.position
+                self.current_connection += 1
+
+    def entry_actions(self):
+        #print("seeking")
+        nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
+        self.path = pathFindAStar(self.wizard.path_graph, \
+                                  nearest_node, \
+                                   self.wizard.path_graph.nodes[self.wizard.new_index])
+
+        
+        self.path_length = len(self.path)
+
+        if (self.path_length > 0):
+            self.current_connection = 0
+            self.wizard.move_target.position = self.path[0].fromNode.position
+
+        else:
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
+
+def getKnight(self):
+    for entity in self.world.entities.values():
+
+        if entity.name == "knight" and entity.team_id == self.base.team_id:
+            return entity
+
+def laneCheck(self):
+    topLane = 0
+    midLane1 = 0
+    midLane2 = 0
+    bottomLane = 0
+    pathToTake = None
+
+    for entity in self.world.entities.values():
+        
+        if entity.name == "orc" and entity.team_id == self.base.team_id and entity.ko != True:
+            #print(self.world.paths[0])
+            #print(entity.brain.states["seeking"].path_graph)
+            orcPath = entity.brain.states["seeking"].path_graph
+
+            if orcPath == self.world.paths[0]:
+                topLane +=1
+            elif orcPath == self.world.paths[1]:
+                bottomLane += 1
+            elif orcPath == self.world.paths[2]:
+                midLane2 += 1
+            else:
+                midLane1 += 1
+    
+    print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
+    # If Knight exists, go to same lane
+    if self.friendlyKnight.ko != True:
+        print("Wizard_GERPERN has decided on it's plan: Follow the Knight!")
+        pathToTake = self.friendlyKnight.currentLane
+
+        return pathToTake
+
+    # If all lanes have same no. of Orcs, return None
+    elif (topLane == midLane1 == midLane2 == bottomLane) and topLane <= 1:
+        return None
+
+    # Else return lane with most Orcs
+    else:
+        laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
+        print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
+        return int(laneDic.get(max(laneDic)))
+
+def targetListUpdate(self):
+
+    self.targetList.clear()
+
+    for entity in self.world.entities.values():
+        
+            if entity.team_id != self.opp_team_id:
+                continue
+
+            if entity.name == "projectile" or entity.name == "explosion":
+                continue
+
+            if entity.ko:
+                continue
+
+            if pygame.math.Vector2(self.position).distance_to(entity.position) > self.min_target_distance:
+                continue
+
+            else:
+                self.targetList.append(entity)
+
+    return len(self.targetList)
+
+
+class WizardStateDefending_GERPERN(State):
+
+    def __init__(self, wizard):
+
+        State.__init__(self, "defending")
         self.wizard = wizard
 
     def do_actions(self):
@@ -261,15 +423,41 @@ class WizardStateSeeking_GERPERN(State):
                 self.wizard.move_target.position = self.path[self.current_connection].toNode.position
                 self.current_connection += 1
 
-        return None
+            else:
+                if self.wizard.currentPath == 4:
+                    path = self.wizard.planBPath[2]
+                    destinationIndex = self.wizard.planBPath[3]
+                else:
+                    path = self.wizard.planBPath[0]
+                    destinationIndex = self.wizard.planBPath[1]
+
+                self.wizard.path_graph = self.wizard.paths[path]
+                self.wizard.currentPath = path
+                nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
+        
+                self.path = pathFindAStar(self.wizard.path_graph, \
+                                          nearest_node, \
+                                          self.wizard.path_graph.nodes[destinationIndex])
+        
+                self.path_length = len(self.path)
+
+                if (self.path_length > 0):
+                    self.current_connection = 0
+                    self.wizard.move_target.position = self.path[0].fromNode.position
+
+                else:
+                    self.wizard.move_target.position = self.wizard.path_graph.nodes[destinationIndex].position
 
     def entry_actions(self):
-        print("seeking")
+        #print("defending")
+        self.wizard.path_graph = self.wizard.paths[4]
+        self.wizard.currentPath = 4
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
+        destinationIndex = 1
+        
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                   self.wizard.path_graph.nodes[self.wizard.new_index])
-
+                                   self.wizard.path_graph.nodes[destinationIndex])
         
         self.path_length = len(self.path)
 
@@ -278,90 +466,7 @@ class WizardStateSeeking_GERPERN(State):
             self.wizard.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
-
-def getKnight(self):
-    for entity in self.world.entities.values():
-
-        if entity.name == "knight" and entity.team_id == self.team_id:
-            return entity
-
-def laneCheck(self):
-    topLane = 0
-    midLane1 = 0
-    midLane2 = 0
-    bottomLane = 0
-    pathToTake = None
-
-    for entity in self.world.entities.values():
-        
-        if entity.name == "orc" and entity.team_id == self.team_id and entity.ko != True:
-            #print(self.world.paths[0])
-            #print(entity.brain.states["seeking"].path_graph)
-            orcPath = entity.brain.states["seeking"].path_graph
-
-            if orcPath == self.world.paths[0]:
-                topLane +=1
-            elif orcPath == self.world.paths[1]:
-                bottomLane += 1
-            elif orcPath == self.world.paths[2]:
-                midLane2 += 1
-            else:
-                midLane1 += 1
-    
-    print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
-    # If Knight exists, go to same lane
-    if self.friendlyKnight.ko != True:
-        print("Following Knight")
-        knightPath = self.friendlyKnight.currentLane
-        #print(knightPath)
-        #print(self.paths[0],self.paths[1],self.paths[2],self.paths[3])
-        if knightPath == 0:
-            pathToTake = 0
-        elif knightPath == 1:
-            pathToTake = 1
-        elif knightPath == 2:
-            pathToTake = 2
-        else:
-            pathToTake = 3
-        
-        return pathToTake
-
-    # If all lanes have same no. of Orcs, return None
-    elif (topLane == midLane1 == midLane2 == bottomLane) and topLane <= 1:
-        return None
-
-    # Else return lane with most Orcs
-    else:
-        laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
-        print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
-        return int(laneDic.get(max(laneDic)))
-
-def targetListUpdate(self):
-
-    self.targetList.clear()
-
-    for entity in self.world.entities.values():
-
-            if entity.team_id == 2:
-                continue
-
-            if entity.team_id == self.team_id:
-                continue
-
-            if entity.name == "projectile" or entity.name == "explosion":
-                continue
-
-            if entity.ko:
-                continue
-
-            if pygame.math.Vector2(self.position).distance_to(entity.position) > self.min_target_distance:
-                continue
-
-            else:
-                self.targetList.append(entity)
-
-    return len(self.targetList)
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[destinationIndex].position
 
 
 class WizardStateAttacking_GERPERN(State):
@@ -370,9 +475,8 @@ class WizardStateAttacking_GERPERN(State):
 
         State.__init__(self, "attacking")
         self.wizard = wizard
-
-    def do_actions(self):
         
+    def do_actions(self):
         opponent_distance = (self.wizard.position - self.wizard.target.position).length()
         if targetListUpdate(self.wizard) > 0:
             self.wizard.target = self.wizard.targetList[0]
@@ -394,19 +498,23 @@ class WizardStateAttacking_GERPERN(State):
 
     def check_conditions(self):
 
-        nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
-        if self.wizard.current_hp/self.wizard.max_hp <= 0.4 or (self.wizard.position - nearest_opponent.position).length() <= 40:
-            return "retreating"
+        if self.wizard.planB != True:
+            nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
+            if self.wizard.current_hp/self.wizard.max_hp <= 0.4 or (self.wizard.position - nearest_opponent.position).length() <= 40:
+                return "retreating"
 
         # target is gone
         if self.wizard.world.get(self.wizard.target.id) is None or self.wizard.target.ko or targetListUpdate(self.wizard) == 0:
             self.wizard.target = None
-            return "seeking"
+            if self.wizard.planB != True:
+                return "seeking"
+            else:
+                return "defending"
             
         return None
 
     def entry_actions(self):
-        print("attacking")
+        #print("attacking")
         return None
 
 
@@ -422,21 +530,27 @@ def findBestTarget(directionToCheck, bestTargetSoFar, numOfTargets, totalHP, sel
         totalTargetHP = 0
 
         for target in self.targetList:
-            xTotal += target.position[0]
-            yTotal += target.position[1]
+            x, y = target.position
+            xTotal += x
+            yTotal += y
             totalTargets += 1
+
+            #print("Target at:",x,",",y)
         
         midpoint = Vector2((xTotal/totalTargets), (yTotal/totalTargets))
+        #print("Derived Midpoint:",midpoint)
 
         for target in self.targetList:
             if (midpoint - target.position).length() <= self.explosion_radius:
+                #print("distance:",(midpoint - target.position).length(),"is lesser than",self.explosion_radius)
                 totalTargetHP += target.current_hp
                 targetsInRange += 1
 
         if targetsInRange == targetListUpdate(self):
-            print("midpoint:",midpoint,"totalTargets:",len(self.targetList))
+            #print("midpoint:",midpoint,"totalTargets:",len(self.targetList))
             return midpoint
         else:
+            #print("midpoint:",midpoint,"totalTargets:",len(self.targetList),"targets in range:",targetsInRange)
             return findBestTarget(0, midpoint, targetsInRange, totalTargetHP, self)
 
     # Else find best point to hit within target range
@@ -445,16 +559,19 @@ def findBestTarget(directionToCheck, bestTargetSoFar, numOfTargets, totalHP, sel
     numTargets = numOfTargets
     step = Vector2(cos(radians(directionToCheck)), sin(radians(directionToCheck))) - currentPoint
     step.normalize_ip()
-    for i in range(6):
+    for i in range(5): # Only takes 5 iterations to cover min_target_distance
         targetsInRange = 0
         totalTargetHP = 0
 
         for target in self.targetList:
-            if currentPoint.distance_to(target.position) <= self.explosion_radius:
+            #print("currentPoint:",currentPoint,"target pos:",target.position, "distance:",(currentPoint - target.position).length())
+            if (currentPoint - target.position).length() <= self.explosion_radius:
+                #print(target.name,"is in range")
                 targetsInRange += 1
                 totalTargetHP += target.current_hp
       
         if targetsInRange > numTargets:
+            #print("found better target at",currentPoint,"with", targetsInRange,"targets")
             numTargets = targetsInRange
             x, y = currentPoint
             bestSoFar = Vector2(x, y)
@@ -468,11 +585,13 @@ def findBestTarget(directionToCheck, bestTargetSoFar, numOfTargets, totalHP, sel
 
         currentPoint += (step*self.explosion_radius)
 
-    if directionToCheck == 315:
+    if directionToCheck == 330:
+        if numTargets == 0:
+            return self.targetList[0].position
         return bestSoFar
         
-    
-    return findBestTarget(directionToCheck+45, bestSoFar, numTargets, totalTargetHP, self)
+   # Check again at an angle 30 degrees more
+    return findBestTarget(directionToCheck+30, bestSoFar, numTargets, totalTargetHP, self)
 
 
 class WizardStateKO_GERPERN(State):
@@ -498,7 +617,7 @@ class WizardStateKO_GERPERN(State):
         return None
 
     def entry_actions(self):
-        print("ko")
+        #print("ko")
         self.wizard.current_hp = self.wizard.max_hp
         self.wizard.position = Vector2(self.wizard.base.spawn_position)
         self.wizard.velocity = Vector2(0, 0)

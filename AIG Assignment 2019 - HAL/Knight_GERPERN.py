@@ -220,7 +220,7 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(2,3)]
+        self.path_graph = self.knight.paths[randint(0,1)]
 
 
     def do_actions(self):
@@ -349,7 +349,7 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        pathChosen = randint(2,3)
+        pathChosen = randint(0,1)
         self.path_graph = self.knight.paths[pathChosen]
         self.knight.currentLane = pathChosen
 
