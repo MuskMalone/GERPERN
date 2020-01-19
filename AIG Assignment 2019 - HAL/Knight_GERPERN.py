@@ -48,10 +48,7 @@ class Knight_GERPERN(Character):
         self.dodge_vector = None
         self.dodge_cooldown = 0.
         self.detection_distance = 150
-
-        self.healing_lvl = 0
-        self.heal_cooldown_lvl = 0
-        self.melee_cooldown_lvl = 0
+        self.currentLane = 0
 
         self.maxSpeed = 80
         self.min_target_distance = 100
@@ -303,7 +300,6 @@ class KnightStateDodging_GERPERN(State):
 
     def check_conditions(self):
 
-        print(str(self.pos) + "before")
         #check if hes dodged
         if self.dodged is False and (self.knight.position - self.dodge_position).length() <= 5:
             self.dodge_target = self.og_position
@@ -319,7 +315,6 @@ class KnightStateDodging_GERPERN(State):
             if state != self.knight.brain.active_state.name:
                 return state
         self.pos = Vector2(self.knight.position.x, self.knight.position.y)
-        print(str(self.pos) + "after")
         return None
 
 
@@ -349,7 +344,9 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(0, 1)]
+        path = randint(0,1)
+        self.path_graph = self.knight.paths[path]
+        self.knight.currentLane = path
 
 
     def do_actions(self):
@@ -427,12 +424,7 @@ class KnightStateAttacking_GERPERN(State):
         #    self.knight.target.brain.set_state("seeking")
 
     def check_conditions(self):
-        stuff = self.knight.get_enemy_list()
-        print("first")
-        for x, y in stuff.items():
-            print(x)
-        print("last")
-        if self.knight.target is None:
+        while self.knight.target is None:
             enemies = self.knight.get_enemy_list()
             if "base" in enemies.keys():
                 self.knight.target = enemies["base"]
