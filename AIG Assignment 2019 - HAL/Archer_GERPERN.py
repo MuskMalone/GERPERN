@@ -11,9 +11,8 @@ class Archer_GERPERN(Character):
     def __init__(self, world, image, projectile_image, base, position):
 
         Character.__init__(self, world, "archer", image)
-
         self.projectile_image = projectile_image
-
+        
         self.base = base
         self.position = position
         self.move_target = GameEntity(world, "archer_move_target", None)
@@ -30,22 +29,33 @@ class Archer_GERPERN(Character):
         self.kite_position = None
         self.enemy_type = None
         self.attacked = "false"
+        self.full_path = []
+        self.current_connection = 0
+        self.reverse_connection = 0
+        if self.base.team_id == 1:
+            self.enemy_base_index = 0
+        else:
+            self.enemy_base_index = 24
+        self.graph = Graph(self)
+        self.generate_Archerpathfinding_graphs("Archer_paths.txt")
         seeking_state = ArcherStateSeeking_GERPERN(self)
         attacking_state = ArcherStateAttacking_GERPERN(self)
         ko_state = ArcherStateKO_GERPERN(self)
         kiting_state = ArcherStateKiting_GERPERN(self)
-
+        fleeing_state = ArcherStateFleeing_GERPERN(self)
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
         self.brain.add_state(kiting_state)
         self.brain.add_state(ko_state)
+        self.brain.add_state(fleeing_state)
         
         self.brain.set_state("seeking")
+        
 
     def render(self, surface):
 
         Character.render(self, surface)
-
+        #Draw nodes' coordinate
 
     def process(self, time_passed):
         
@@ -56,7 +66,54 @@ class Archer_GERPERN(Character):
             choice = randint(0, len(level_up_stats) - 1)
             self.level_up(level_up_stats[2])
             
-    
+            
+    def generate_Archerpathfinding_graphs(self, filename):
+
+        f = open(filename, "r")
+
+        # Create the nodes
+        line = f.readline()
+        while line != "connections\n":
+            data = line.split()
+            self.graph.nodes[int(data[0])] = Node(self.graph, int(data[0]), int(data[1]), int(data[2]))
+            line = f.readline()
+
+        # Create the connections
+        line = f.readline()
+        while line != "paths\n":
+            data = line.split()
+            node0 = int(data[0])
+            node1 = int(data[1])
+            distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+            self.graph.nodes[node0].addConnection(self.graph.nodes[node1], distance)
+            self.graph.nodes[node1].addConnection(self.graph.nodes[node0], distance)
+            line = f.readline()
+
+        # Create the orc paths, which are also Graphs
+        self.paths = []
+        line = f.readline()
+        while line != "":
+            path = Graph(self)
+            data = line.split()
+            
+            # Create the nodes
+            for i in range(0, len(data)):
+                node = self.graph.nodes[int(data[i])]
+                path.nodes[int(data[i])] = Node(path, int(data[i]), node.position[0], node.position[1])
+
+            # Create the connections
+            for i in range(0, len(data)-1):
+                node0 = int(data[i])
+                node1 = int(data[i + 1])
+                distance = (Vector2(self.graph.nodes[node0].position) - Vector2(self.graph.nodes[node1].position)).length()
+                path.nodes[node0].addConnection(path.nodes[node1], distance)
+                path.nodes[node1].addConnection(path.nodes[node0], distance)
+               
+            self.paths.append(path)
+            line = f.readline()
+            
+        f.close()
+        
     def getcharLane_Position(self,E):
         Arect = E.image.get_rect(topleft=self.position)
         Lane = None
@@ -106,17 +163,19 @@ class Archer_GERPERN(Character):
                 LanePosition = "Left_Side"
             else:    
                 Lane = "Mid"
-                if AR_TL_x >= 345 and AR_BR_x <= 671:
+                if E.position.x < 345:
+                    LanePosition = "Top_midPath"
+                elif E.position.x >= 345 and E.position.x <= 671:
                     LanePosition = "HexagonArea"
                 else:
-                    LanePosition = "midPath"
-        #print("LP: ",LanePosition)
+
+                    LanePosition = "Bot_midPath"
+                    
         return Lane,LanePosition
 
     def MovetoSafeLocation_Safe(self,A_Lane,A_LanePos):
         currentx, currenty = self.position
-        self.kite_position = Vector2(0,0)
-      
+        self.normal_pos = self.position
         if A_Lane == "Top":
             if A_LanePos == "Top_Side":
                 if self.base.team_id == 1:
@@ -162,9 +221,22 @@ class Archer_GERPERN(Character):
                         self.kite_position = Vector2(44,164)
                     else:
                         self.kite_position = Vector2(44,716)
-
-            
-
+        else:
+            if self.reverse_connection == 0:
+                diff = 1000
+                for i in self.full_path:
+                    if (i.fromNode.position - self.position).length() < diff:
+                        self.reverse_connection = self.full_path.index(i)
+                        diff = (i.fromNode.position - self.position).length()
+                #print("reverse_connection: ",self.reverse_connection)
+                self.kite_position = self.full_path[self.reverse_connection].fromNode.position
+                #print("kite: ",self.kite_position)
+            else:
+                if (self.position - self.kite_position).length() < 8:
+                    if self.reverse_connection >= 1:
+                        self.reverse_connection -= 1
+                        self.kite_position = self.full_path[self.reverse_connection].fromNode.position
+        
         self.velocity = self.kite_position - self.position
         if self.velocity.length() > 0:
             self.velocity.normalize_ip();
@@ -189,67 +261,121 @@ class Archer_GERPERN(Character):
                 else:
                     if abs(enemyx-currentx) > abs(enemyy-currenty):
                         safe_y = currenty - 40
-                        safe_x = currentx
                     else:
                         safe_x = currentx + 40
-                        safe_y = currenty
             else:
                 if abs(enemyx-currentx) > abs(enemyy-currenty):
                     safe_y = currenty - 40
-                    safe_x = currentx
                 else:
                     safe_x = currentx + 40
-                    safe_y = currenty
                 
         elif A_Lane == "Bottom":
             if A_LanePos == B_LanePos:           
-                if A_LanePos == "Bottom_Side":
-                 
+                if A_LanePos == "Bottom_Side":                 
                     safe_y = currenty + 40
                     safe_x = currentx + ((enemyx-currentx)/abs(enemyx-currentx))*40
                     
-                elif A_LanePos == "Left_Side":
-                   
+                elif A_LanePos == "Left_Side":                  
                     safe_x = currentx - 40
                     safe_y = currenty +((enemyy-currenty)/abs(enemyy-currenty))*40
 
                 else:
-                    if abs(enemyx-currentx) > abs(enemyy-currenty):
-                       
+                    if abs(enemyx-currentx) > abs(enemyy-currenty):                       
                         safe_y = currenty + 40
-                        safe_x = currentx
-                    else:
-                       
+                    else:                       
                         safe_x = currentx - 40
-                        safe_y = currenty
                                         
             else:
                 if abs(enemyx-currentx) > abs(enemyy-currenty):
                     safe_y = currenty + 40
-                    safe_x = currentx
                 else:
                     safe_x = currentx - 40
-                    safe_y = currenty
                
 
         else:
-           # print("Corner")
-            if A_LanePos == B_LanePos:                
-                if A_LanePos == "Top_Side":
-                    safe_y = currenty - 40
-                    safe_x = currentx + ((enemyx-currentx)/abs(enemyx-currentx))*40 
-                elif A_LanePos == "Right_Side":
-                    safe_x = currentx + 40
-                    safe_y = currenty +((enemyy-currenty)/abs(enemyy-currenty))*40 
-            else:
-               # print("Diff_Corner")
-                if abs(enemyx-currentx) > abs(enemyy-currenty):
-                    safe_y = currenty + 40
-                    safe_x = currentx
+            if A_LanePos == "Top_midPath" or A_LanePos == "Bot_midPath":
+                if self.target.name == "base" or self.target.name == "tower":
+                    if self.base.team_id==0:
+                        if self.target.position.x < 900:
+                           safe_y = currenty + 40
+                           safe_x = currentx - 40
+                        else:
+                           safe_y = currenty - 40
+                           safe_x = currentx + 40                 
+                    else:
+                        if self.target.position.x < 126:
+                           safe_y = currenty + 40
+                           safe_x = currentx - 40
+                        else:
+                           safe_y = currenty - 40
+                           safe_x = currentx + 40
                 else:
-                    safe_x = currentx - 40
-                    safe_y = currenty
-                                                
+                    if A_LanePos == B_LanePos:
+                        safe_y = currenty - 40
+                        safe_x = currentx + 40
+                    else:
+                        if A_LanePos == "Top_midPath":
+                            Sp_val = (self.target.position.y - 290)/abs(self.target.position.y - 290)
+                            safe_y = currenty + (40*Sp_val)
+                            safe_x = currentx - (40*Sp_val)
+                        else:
+                            Sp_val = (self.target.position.y - 477)/abs(self.target.position.y - 477)
+                            safe_y = currenty + (40*Sp_val)
+                            safe_x = currentx - (40*Sp_val)
+                                                    
+            else:
+                if currentx >= 345 and currentx < 526 and currenty <= 290 and currenty > 228:
+                    if self.target.position.y <=290:
+                        safe_y = currenty - 40
+                    else:
+                        safe_x = currentx - 40
+                elif currentx > 345 and currentx <= 362 and currenty > 290 and currenty <= 482:
+                    if self.target.position.y <=482:
+                        if currenty > self.target.position.y:
+                            safe_y = currenty - 40
+                            safe_x = currentx - 40
+                        else:
+                            safe_y = currenty + 40
+                            safe_x = currentx - 40
+                    else:
+                        safe_y = currenty + 40
+                        safe_x = currentx - 40
+                elif currentx > 362 and currentx <= 487 and currenty > 482 and currenty <= 545:
+                    if self.target.position.y <=482:
+                        safe_y = currenty + 40
+                    else:
+                        safe_x = currentx - 40                        
+                elif currentx > 487 and currentx <= 671 and currenty < 545 and currenty >= 477:
+                    if self.target.position.x >= 487:
+                        if self.target.position.y >477:
+                            if currentx <= self.target.position.x:
+                                safe_y = currenty + 40
+                                safe_x = currentx + 40
+                            else:
+                                safe_y = currenty + 40
+                                safe_x = currentx - 40
+                        else: 
+                            safe_x = currentx + 40
+                    else:
+                        safe_y = currenty + 40
+                        safe_x = currentx - 40
+                        
+                elif currentx >= 660 and currentx < 671 and currenty >= 285 and currenty < 477:
+                    if currenty > self.target.position.y:    
+                        if self.target.position.x < 660:
+                            safe_y = currenty - 40 
+                        else:
+                            safe_x = currentx + 40
+                    else:
+                        if self.target.position.x < 660:
+                            safe_y = currenty + 40
+                        else:
+                            safe_x = currentx + 40
+                elif currentx >= 526 and currentx < 660 and currenty >= 228 and currenty < 285:
+                    if self.target.position.y <= 285:
+                        safe_y = currenty - 40
+                    else:
+                        safe_x = currentx + 40          
         self.kite_position = Vector2(safe_x,safe_y)
         self.velocity = self.kite_position - self.position
         if self.velocity.length() > 0:
@@ -258,24 +384,12 @@ class Archer_GERPERN(Character):
         
      
     def GetEnemyType(self):
-        blue_knight_image = pygame.image.load("assets/blue_knight_32_32.png").convert_alpha()
-        blue_archer_image = pygame.image.load("assets/blue_archer_32_32.png").convert_alpha()
-        blue_wizard_image = pygame.image.load("assets/blue_wizard_32_32.png").convert_alpha()
-        blue_tower_image = pygame.image.load("assets/blue_tower.png").convert_alpha()
-        blue_base_image = pygame.image.load("assets/blue_base.png").convert_alpha()
-        blue_orc_image = pygame.image.load("assets/blue_orc_32_32.png").convert_alpha()
-        red_knight_image = pygame.image.load("assets/red_knight_32_32.png").convert_alpha()
-        red_archer_image = pygame.image.load("assets/red_archer_32_32.png").convert_alpha()        
-        red_wizard_image = pygame.image.load("assets/red_wizard_32_32.png").convert_alpha()
-        red_tower_image = pygame.image.load("assets/red_tower.png").convert_alpha()     
-        red_base_image = pygame.image.load("assets/red_base.png").convert_alpha()
-        red_orc_image = pygame.image.load("assets/red_orc_32_32.png").convert_alpha()
         
         if self.target.name == "archer" or self.target.name == "tower" or self.target.name == "base":
             self.enemy_type = "aggro_ranged"
-        if self.target.image == red_knight_image or self.target.image == blue_knight_image or self.target.image == red_orc_image or self.target.image == blue_orc_image:
+        if self.target.name == "knight" or self.target.name == "orc":
             self.enemy_type = "melee"
-        if self.target.image == red_wizard_image or self.target.image == blue_wizard_image:
+        if self.target.name == "wizard":
             self.enemy_type = "safe_melee"
             
     
@@ -289,12 +403,15 @@ class ArcherStateKiting_GERPERN(State):
     def __init__(self, archer):
         State.__init__(self, "kiting")
         self.archer = archer
+        self.health = 0
         
-        
-        self.archer.path_graph = self.archer.world.paths[randint(0, len(self.archer.world.paths)-1)]
+        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
         
         
     def do_actions(self):
+        #print("kiting")
+        #print("kite: ",self.archer.kite_position)
+        print("npnp",self.archer.normal_pos)
         if self.archer.target != None:
             if self.archer.enemy_type == "aggro_ranged":
                 if self.archer.target.ranged_cooldown > self.archer.ranged_cooldown:
@@ -311,15 +428,35 @@ class ArcherStateKiting_GERPERN(State):
 
 
     def check_conditions(self):
-        if self.archer.target == None:
+        if self.archer.target != None:
+            #print("nope")
+            if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
+                self.archer.target = None
+            
+        if self.archer.target == None:            
             if (self.archer.position - self.archer.normal_pos).length() < 5:
                 self.archer.velocity = Vector2(0,0)
                 self.archer.normal_pos = None
                 self.archer.enemy_type = None
                 self.archer.Action = "not kited"
                 return "seeking"
+            else:
+                #print("work")
+                Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+                self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
 
         else:
+            #print("health: ",self.health)
+            if self.archer.Seconds_passed >= 1:
+                #print("self.health: ",self.health)
+                #print("self.archer.current_hp: ",self.archer.current_hp)
+                if self.health > self.archer.current_hp:
+                    #print("yes")
+                    return "fleeing"
+                else:
+                    #print("no")
+                    self.archer.Start_ticks = pygame.time.get_ticks()
+                    
             if self.archer.enemy_type == "aggro_ranged": 
                 if (self.archer.position -  self.archer.kite_position).length() < 2:
                     self.archer.velocity = Vector2(0,0)
@@ -331,15 +468,19 @@ class ArcherStateKiting_GERPERN(State):
                         self.archer.Action = "not kited"
                     return "attacking"
             else:
+                
                 if(self.archer.position -  self.archer.target.position).length() >= self.archer.min_target_distance:
+                    
                     self.archer.velocity = Vector2(0,0)
+                    
                 if self.archer.Seconds_passed >= self.archer.ranged_cooldown:
+                    
                    return "attacking"
             
 
     def entry_actions(self):
-        #print("Kite_position",self.archer.kite_position)
-        #print("normal_position",self.archer.normal_pos)
+        self.health = self.archer.current_hp
+
         if self.archer.target == None:
             self.archer.kite_position = self.archer.normal_pos
             self.archer.velocity = self.archer.kite_position - self.archer.position
@@ -379,6 +520,46 @@ class ArcherStateKiting_GERPERN(State):
             
         
         
+class ArcherStateFleeing_GERPERN(State):
+
+    def __init__(self, archer):
+
+        State.__init__(self, "fleeing")
+        self.archer = archer
+        self.health = None
+        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
+        
+
+
+    def do_actions(self):
+        self.archer.heal()
+        Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+        self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
+        self.archer.Seconds_passed =(pygame.time.get_ticks()- self.archer.Start_ticks)/1000
+
+
+    def check_conditions(self):
+        
+        if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
+             self.archer.velocity = Vector2(0,0)
+             self.archer.normal_pos = None
+             self.archer.enemy_type = None
+             self.archer.Action = "not kited"
+             return "seeking"
+        else:
+            if self.archer.Seconds_passed >= 2:
+                if self.health >= self.archer.current_hp:
+                    return "attacking"
+                else:
+                    self.archer.Start_ticks = pygame.time.get_ticks()          
+        return None
+
+    def entry_actions(self):
+        Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+        self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
+        self.health = self.archer.current_hp
+        self.archer.Start_ticks = pygame.time.get_ticks()
+        
 
        
 
@@ -390,12 +571,12 @@ class ArcherStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.archer = archer
 
-        #self.archer.path_graph = self.archer.world.paths[randint(0, len(self.archer.world.paths)-1)]
-        self.archer.path_graph = self.archer.world.paths[0]
+        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
+        
 
 
     def do_actions(self):
-
+        
         #A_rect = self.archer.GetORects()
         Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
         self.archer.velocity = self.archer.move_target.position - self.archer.position
@@ -413,37 +594,43 @@ class ArcherStateSeeking_GERPERN(State):
             if opponent_distance <= self.archer.min_target_distance:
                 self.archer.target = nearest_opponent
                 self.archer.GetEnemyType()
-                redtower = pygame.image.load("assets/red_tower.png").convert_alpha()
-                if self.archer.target.image == redtower:
-                    print("Enemy type: ",self.archer.target.image)
                 return "attacking"
         
         if (self.archer.position - self.archer.move_target.position).length() < 8:
 
             # continue on path
-            if self.current_connection < self.path_length:
-                self.archer.move_target.position = self.path[self.current_connection].toNode.position
-                self.current_connection += 1
+            if self.archer.current_connection < self.path_length:
+                self.archer.move_target.position = self.path[self.archer.current_connection].toNode.position
+                self.archer.current_connection += 1
+               
             
         return None
 
     def entry_actions(self):
-        
+        #print("teamidS: ",self.archer.team_id)
         nearest_node = self.archer.path_graph.get_nearest_node(self.archer.position)
+        
+               
 
         self.path = pathFindAStar(self.archer.path_graph, \
                                   nearest_node, \
-                                  self.archer.path_graph.nodes[self.archer.base.target_node_index])
-
-        
+                                  self.archer.path_graph.nodes[self.archer.enemy_base_index])
+        if self.archer.base.team_id ==1:
+            if nearest_node.position == Vector2(900,640):
+                for i in self.path:
+                    self.archer.full_path.append(i)
+        else:
+            if nearest_node.position == Vector2(126,126):
+                for i in self.path:
+                    self.archer.full_path.append(i)
         self.path_length = len(self.path)
 
         if (self.path_length > 0):
-            self.current_connection = 0
+            self.archer.current_connection = 0
             self.archer.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.archer.move_target.position = self.archer.path_graph.nodes[self.archer.base.target_node_index].position
+            self.archer.move_target.position = self.archer.path_graph.nodes[self.archer.enemy_base_index].position
 
 
 class ArcherStateAttacking_GERPERN(State):
@@ -515,7 +702,7 @@ class ArcherStateKO_GERPERN(State):
         if self.archer.current_respawn_time <= 0:
             self.archer.current_respawn_time = self.archer.respawn_time
             self.archer.ko = False
-            self.archer.path_graph = self.archer.world.paths[randint(0, len(self.archer.world.paths)-1)]
+            self.archer.path_graph = self.archer.paths[randint(0, 1)]
             return "seeking"
             
         return None
