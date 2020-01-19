@@ -40,7 +40,7 @@ class Wizard_GERPERN(Character):
         self.planB = False
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("improved_knight_paths.txt")
+        self.generate_pathfinding_graphs("wizard_paths.txt")
 
         if self.base.team_id == 0:
             self.new_index = 0
