@@ -32,21 +32,20 @@ class Wizard_GERPERN(Character):
         self.friendlyKnight = getKnight(self)
         self.opp_team_id = 1-self.base.team_id
         self.currentPath = None
-        if self.base.team_id == 1:
+        if self.base.team_id == 0:
             self.planBPath = [4,1,5,2]
         else:
-            self.planBPath = []
+            self.planBPath = [6,20,7,19]
 
         self.planB = False
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("improved_knight_paths.txt")
+        self.generate_pathfinding_graphs("wizard_paths.txt")
 
-        self.new_index = 0
-        if self.base.spawn_node_index == 0:
-            self.new_index = 22
-        elif self.base.spawn_node_index == 4:
+        if self.base.team_id == 0:
             self.new_index = 0
+        else:
+            self.new_index = 21
 
         retreating_state = WizardStateRetreating_GERPERN(self)
         meditating_state = WizardStateMeditating_GERPERN(self)
@@ -66,12 +65,12 @@ class Wizard_GERPERN(Character):
 
     def render(self, surface):
 
-        #self.graph.render(surface)
         Character.render(self, surface)
 
         #font = pygame.font.SysFont("comicsansms", 18, True)
-        #msg = font.render(str(self.level), True, (255, 255, 255))
-        #surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
+        ##msg = font.render(str(self.level), True, (255, 255, 255))
+        ##surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
+        #self.graph.render(surface)
         #for x in self.graph.nodes:
         #    i = self.graph.nodes[x]
         #    i_x,i_y = i.position
@@ -145,6 +144,7 @@ class WizardStateRetreating_GERPERN(State):
 
         State.__init__(self, "retreating")
         self.wizard = wizard
+        self.path_graph = randint(2,3)
 
     def do_actions(self):
         
@@ -180,11 +180,11 @@ class WizardStateRetreating_GERPERN(State):
 
         nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
-        if nearest_node == self.wizard.path_graph.nodes[self.wizard.base.spawn_node_index] and targetListUpdate(self.wizard) == 0:
+        if nearest_node == self.wizard.path_graph.nodes[self.wizard.new_index] and targetListUpdate(self.wizard) == 0:
             self.wizard.target = None
             return "seeking"
 
-        elif (nearest_opponent.position - self.wizard.position).length() >= (self.wizard.min_target_distance*0.8) and self.wizard.current_hp/self.wizard.max_hp >= 0.6:
+        elif (nearest_opponent.position - self.wizard.position).length() >= (self.wizard.min_target_distance*0.85) and self.wizard.current_hp/self.wizard.max_hp >= 0.6:
             return "attacking"
             
         elif self.wizard.current_hp/self.wizard.max_hp >= 0.6 and (self.wizard.world.get(self.wizard.target.id) is None or self.wizard.target.ko or targetListUpdate(self.wizard) == 0):
@@ -197,7 +197,7 @@ class WizardStateRetreating_GERPERN(State):
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                  self.wizard.path_graph.nodes[self.wizard.base.spawn_node_index])
+                                  self.wizard.path_graph.nodes[self.wizard.new_index])
         
         self.path_length = len(self.path)
 
@@ -206,7 +206,7 @@ class WizardStateRetreating_GERPERN(State):
             self.wizard.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.base.spawn_node_index].position
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
 
 
 class WizardStateMeditating_GERPERN(State):
@@ -307,7 +307,7 @@ class WizardStateSeeking_GERPERN(State):
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
-                                   self.wizard.path_graph.nodes[self.wizard.new_index])
+                                   self.wizard.path_graph.nodes[21-self.wizard.new_index])
 
         
         self.path_length = len(self.path)
@@ -317,7 +317,7 @@ class WizardStateSeeking_GERPERN(State):
             self.wizard.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.wizard.move_target.position = self.wizard.path_graph.nodes[self.wizard.new_index].position
+            self.wizard.move_target.position = self.wizard.path_graph.nodes[21-self.wizard.new_index].position
 
 def getKnight(self):
     for entity in self.world.entities.values():
@@ -425,7 +425,7 @@ class WizardStateDefending_GERPERN(State):
                 self.current_connection += 1
 
             else:
-                if self.wizard.currentPath == 4:
+                if self.wizard.currentPath == self.wizard.planBPath[0]:
                     path = self.wizard.planBPath[2]
                     destinationIndex = self.wizard.planBPath[3]
                 else:
@@ -451,10 +451,10 @@ class WizardStateDefending_GERPERN(State):
 
     def entry_actions(self):
         #print("defending")
-        self.wizard.path_graph = self.wizard.paths[4]
-        self.wizard.currentPath = 4
+        self.wizard.path_graph = self.wizard.paths[self.wizard.planBPath[0]]
+        self.wizard.currentPath = self.wizard.planBPath[0]
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
-        destinationIndex = 1
+        destinationIndex = self.wizard.planBPath[1]
         
         self.path = pathFindAStar(self.wizard.path_graph, \
                                   nearest_node, \
@@ -501,7 +501,7 @@ class WizardStateAttacking_GERPERN(State):
 
         if self.wizard.planB != True:
             nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
-            if self.wizard.current_hp/self.wizard.max_hp <= 0.4 or (self.wizard.position - nearest_opponent.position).length() <= 40:
+            if self.wizard.current_hp/self.wizard.max_hp <= 0.4 or (self.wizard.position - nearest_opponent.position).length() <= 45:
                 return "retreating"
 
         # target is gone
