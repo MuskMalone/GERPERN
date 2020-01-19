@@ -113,6 +113,7 @@ class Archer_GERPERN(Character):
             line = f.readline()
             
         f.close()
+    
         
     def getcharLane_Position(self,E):
         Arect = E.image.get_rect(topleft=self.position)
@@ -168,10 +169,47 @@ class Archer_GERPERN(Character):
                 elif E.position.x >= 345 and E.position.x <= 671:
                     LanePosition = "HexagonArea"
                 else:
-
                     LanePosition = "Bot_midPath"
                     
         return Lane,LanePosition
+
+    def get_nearest_opponent_Archer(self, world):
+        nearest_opponent = None
+        distance = 0.
+
+        for entity in world.entities.values():
+            Archer_Lane,Arhcer_LanePosition = self.getcharLane_Position(self)
+            E_Lane,E_LanePosition = self.getcharLane_Position(entity)
+            # neutral entity
+            if entity.team_id == 2:
+                continue
+
+            # same team
+            if entity.team_id == self.base.team_id:
+                continue
+
+            if entity.name == "projectile" or entity.name == "explosion":
+                continue
+
+            if entity.ko:
+                continue
+
+            if Archer_Lane != E_Lane:
+                if entity.target != self.base:
+                    continue
+                    
+            if nearest_opponent is None:
+                nearest_opponent = entity
+                distance = (self.position - entity.position).length()
+            else:
+                if distance > (self.position - entity.position).length():
+                    distance = (self.position - entity.position).length()
+                    nearest_opponent = entity
+        
+        return nearest_opponent
+
+
+
 
     def MovetoSafeLocation_Safe(self,A_Lane,A_LanePos):
         currentx, currenty = self.position
@@ -411,7 +449,7 @@ class ArcherStateKiting_GERPERN(State):
     def do_actions(self):
         #print("kiting")
         #print("kite: ",self.archer.kite_position)
-        print("npnp",self.archer.normal_pos)
+        #print("npnp",self.archer.normal_pos)
         if self.archer.target != None:
             if self.archer.enemy_type == "aggro_ranged":
                 if self.archer.target.ranged_cooldown > self.archer.ranged_cooldown:
@@ -446,16 +484,17 @@ class ArcherStateKiting_GERPERN(State):
                 self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
 
         else:
+           # print("secs: ",self.archer.Seconds_passed)
             #print("health: ",self.health)
-            if self.archer.Seconds_passed >= 1:
-                #print("self.health: ",self.health)
+            #if self.archer.Seconds_passed >= 0.5:
+               # print("self.health: ",self.health)
                 #print("self.archer.current_hp: ",self.archer.current_hp)
-                if self.health > self.archer.current_hp:
+            if self.health > self.archer.current_hp:
                     #print("yes")
-                    return "fleeing"
-                else:
+                return "fleeing"
+                #else:
                     #print("no")
-                    self.archer.Start_ticks = pygame.time.get_ticks()
+                    #self.archer.Start_ticks = pygame.time.get_ticks()
                     
             if self.archer.enemy_type == "aggro_ranged": 
                 if (self.archer.position -  self.archer.kite_position).length() < 2:
@@ -469,10 +508,8 @@ class ArcherStateKiting_GERPERN(State):
                     return "attacking"
             else:
                 
-                if(self.archer.position -  self.archer.target.position).length() >= self.archer.min_target_distance:
-                    
-                    self.archer.velocity = Vector2(0,0)
-                    
+                if(self.archer.position -  self.archer.target.position).length() >= self.archer.min_target_distance-75:                    
+                    self.archer.velocity = Vector2(0,0)                    
                 if self.archer.Seconds_passed >= self.archer.ranged_cooldown:
                     
                    return "attacking"
@@ -480,7 +517,6 @@ class ArcherStateKiting_GERPERN(State):
 
     def entry_actions(self):
         self.health = self.archer.current_hp
-
         if self.archer.target == None:
             self.archer.kite_position = self.archer.normal_pos
             self.archer.velocity = self.archer.kite_position - self.archer.position
@@ -547,9 +583,9 @@ class ArcherStateFleeing_GERPERN(State):
              self.archer.Action = "not kited"
              return "seeking"
         else:
-            if self.archer.Seconds_passed >= 2:
-                if self.health >= self.archer.current_hp:
-                    return "attacking"
+            if self.archer.Seconds_passed >= 1:
+                if self.archer.current_hp > self.health:
+                    return "seeking"
                 else:
                     self.archer.Start_ticks = pygame.time.get_ticks()          
         return None
@@ -588,7 +624,7 @@ class ArcherStateSeeking_GERPERN(State):
     def check_conditions(self):
 
         # check if opponent is in range
-        nearest_opponent = self.archer.world.get_nearest_opponent(self.archer)
+        nearest_opponent = self.archer.get_nearest_opponent_Archer(self.archer.world)
         if nearest_opponent is not None:
             opponent_distance = (self.archer.position - nearest_opponent.position).length()
             if opponent_distance <= self.archer.min_target_distance:
@@ -643,7 +679,7 @@ class ArcherStateAttacking_GERPERN(State):
     def do_actions(self):
 
         opponent_distance = (self.archer.position - self.archer.target.position).length()
-
+        self.archer.Seconds_passed =(pygame.time.get_ticks()- self.archer.Start_ticks)/1000
         # opponent within range
         if opponent_distance <= self.archer.min_target_distance:
             self.archer.velocity = Vector2(0, 0)
@@ -660,7 +696,12 @@ class ArcherStateAttacking_GERPERN(State):
 
 
     def check_conditions(self):
-
+        if self.archer.Seconds_passed >= 0.5:
+            if self.health > self.archer.current_hp:
+                return "fleeing"
+            else:
+                self.archer.Start_ticks = pygame.time.get_ticks()
+                
         if self.archer.attacked == "True":
             self.archer.attacked = "false"
             return "kiting"
@@ -680,7 +721,8 @@ class ArcherStateAttacking_GERPERN(State):
         return None
 
     def entry_actions(self):
-
+        self.health = self.archer.current_hp
+        self.archer.Start_ticks = pygame.time.get_ticks()
         return None
 
 
@@ -692,7 +734,7 @@ class ArcherStateKO_GERPERN(State):
         self.archer = archer
 
     def do_actions(self):
-
+        
         return None
 
 
