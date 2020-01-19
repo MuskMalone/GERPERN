@@ -151,7 +151,8 @@ class Knight_GERPERN(Character):
                 continue
 
             if (self.position - entity.position).length() <= self.detection_distance:
-                near_entities[name] = entity
+                near_entities[entity.name] = entity
+                #print(name)
 
         return near_entities
 
@@ -426,10 +427,30 @@ class KnightStateAttacking_GERPERN(State):
         #    self.knight.target.brain.set_state("seeking")
 
     def check_conditions(self):
+        stuff = self.knight.get_enemy_list()
+        print("first")
+        for x, y in stuff.items():
+            print(x)
+        print("last")
+        if self.knight.target is None:
+            enemies = self.knight.get_enemy_list()
+            if "base" in enemies.keys():
+                self.knight.target = enemies["base"]
+            elif "tower" in enemies.keys():
+                self.knight.target = enemies["tower"]
+            elif "wizard" in enemies.keys():
+                self.knight.target = enemies["wizard"]
+            elif "archer" in enemies.keys():
+                self.knight.target = enemies["archer"]
+            elif "knight" in enemies.keys():
+                self.knight.target = enemies["knight"]
+            elif "orc" in enemies.keys():
+                self.knight.target = enemies["orc"]
 
-        nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
-        if nearest_opponent is not None:
-            self.knight.target = nearest_opponent
+        if self.knight.target is not None:
+            if self.knight.world.get(self.knight.target.id) is None or self.knight.target.ko:
+                self.knight.target = None
+
         action = self.knight.root.makeDecision()
         state = action.message
         if state != self.knight.brain.active_state.name:
@@ -443,6 +464,7 @@ class KnightStateAttacking_GERPERN(State):
         #    if entity.team_id != 2 and entity.team_id != self.knight.team_id:
         #        if entity.name == "base":
         #            entity.current_hp = -1
+        self.knight.target = None
         return None
 
     def exit_actions(self):
