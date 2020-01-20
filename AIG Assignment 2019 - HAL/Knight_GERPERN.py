@@ -64,6 +64,7 @@ class Knight_GERPERN(Character):
             self.true_spawn_index = 24
 
         self.currentLane = None
+        self.fleeingLane = None
         self.graph = Graph(self)
         self.generate_pathfinding_graphs("Archer_paths.txt")
 
@@ -221,7 +222,9 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(2,3)]
+        laneToFlee = randint(2,3)
+        self.path_graph = self.knight.paths[laneToFlee]
+        self.knight.fleeingLane = laneToFlee
 
 
     def do_actions(self):
@@ -344,6 +347,7 @@ class KnightStateSeeking_GERPERN(State):
         path = randint(2,3)
         self.path_graph = self.knight.paths[path]
         self.knight.currentLane = path
+        self.knight.fleeingLane = path
 
 
     def do_actions(self):

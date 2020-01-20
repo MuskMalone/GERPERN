@@ -37,6 +37,7 @@ class Wizard_GERPERN(Character):
         else:
             self.planBPath = [6,20,7,19]
 
+        self.skillTree = 2
         self.planB = False
 
         self.graph = Graph(self)
@@ -68,8 +69,8 @@ class Wizard_GERPERN(Character):
         Character.render(self, surface)
 
         #font = pygame.font.SysFont("comicsansms", 18, True)
-        ##msg = font.render(str(self.level), True, (255, 255, 255))
-        ##surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
+        #msg = font.render(str(self.level), True, (255, 255, 255))
+        #surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
         #self.graph.render(surface)
         #for x in self.graph.nodes:
         #    i = self.graph.nodes[x]
@@ -81,13 +82,21 @@ class Wizard_GERPERN(Character):
         
         Character.process(self, time_passed)
         
-        level_up_stats = ["ranged cooldown", "ranged damage", "hp", "speed", "projectile range"]
+        level_up_stats = ["ranged cooldown", "ranged damage", "healing cooldown", "speed", "hp"]
         if self.can_level_up():
-            if self.level < 3:
+            if self.level < 2:  # Increase ranged cooldown first 2 times
                 self.level_up(level_up_stats[0])
+
             else:
-                self.level_up(level_up_stats[1])         
-            
+                if self.skillTree == 1:     # Increase damage throughout
+                    self.level_up(level-up_stats[1])
+
+                elif self.skillTree == 2:   # Alternate between healing & ranged cooldown
+                    if self.level % 2 == 0:
+                        self.level_up(level_up_stats[2])         
+                    else:
+                        self.level_up(level_up_stats[0])
+
             self.level += 1
 
     def generate_pathfinding_graphs(self, filename):
@@ -144,7 +153,6 @@ class WizardStateRetreating_GERPERN(State):
 
         State.__init__(self, "retreating")
         self.wizard = wizard
-        self.path_graph = randint(2,3)
 
     def do_actions(self):
         
@@ -193,6 +201,7 @@ class WizardStateRetreating_GERPERN(State):
 
     def entry_actions(self):
         #print("retreating")
+        self.path_graph = self.wizard.friendlyKnight.fleeingLane
 
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
@@ -279,11 +288,12 @@ class WizardStateSeeking_GERPERN(State):
         if self.wizard.velocity.length() > 0:
             self.wizard.velocity.normalize_ip();
             self.wizard.velocity *= self.wizard.maxSpeed
-        toBePosition = self.wizard.position + 2*self.wizard.velocity
+        toBePosition = self.wizard.position + self.wizard.healing_cooldown*self.wizard.velocity # Where wizard will be in "self.wizard.healing_cooldown" seconds
 
         # Check if HP is full
         if self.wizard.current_hp != self.wizard.max_hp:
 
+            # If wizard will engage in battle in "self.wizard.healing_cooldown" seconds, don't heal
             nearest_opponent = self.wizard.world.get_nearest_opponent(self.wizard)
             if self.wizard.current_hp/self.wizard.max_hp < 0.3 or (toBePosition - nearest_opponent.position).length() > self.wizard.min_target_distance:
                 self.wizard.heal()
@@ -413,6 +423,9 @@ class WizardStateDefending_GERPERN(State):
                 self.wizard.heal()
 
     def check_conditions(self):
+
+        if oppTowerCount(self.wizard) <= teamTowerCount(self.wizard):
+            return "meditating"
 
         # Check if any target in range
         if targetListUpdate(self.wizard) > 0:
