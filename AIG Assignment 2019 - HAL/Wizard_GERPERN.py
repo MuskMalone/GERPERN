@@ -41,7 +41,7 @@ class Wizard_GERPERN(Character):
         self.planB = False
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("wizard_paths.txt")
+        self.generate_pathfinding_graphs("wizard_paths_GERPERN.txt")
 
         if self.base.team_id == 0:
             self.new_index = 0
@@ -201,7 +201,7 @@ class WizardStateRetreating_GERPERN(State):
 
     def entry_actions(self):
         #print("retreating")
-        self.path_graph = self.wizard.friendlyKnight.fleeingLane
+        self.path_graph = self.wizard.friendlyKnight.currentLane
 
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
@@ -236,10 +236,10 @@ class WizardStateMeditating_GERPERN(State):
         
         laneChosen = laneCheck(self.wizard)
 
-        if  oppTowerCount(self.wizard) > teamTowerCount(self.wizard): #and teamTowerCount(self.wizard) == 0 and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
+        if  oppTowerCount(self.wizard) > teamTowerCount(self.wizard) or self.wizard.base.current_hp/self.wizard.base.max_hp < 0.3 and self.wizard.base.current_hp < (getOppBase(self.wizard)).current_hp: #and teamTowerCount(self.wizard) == 0 and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
             self.wizard.planB = True
-            print("Wizard_GERPERN notices both his towers are down but points are higher than", TEAM_NAME[self.wizard.opp_team_id]+"'s")
-            print("Wizard_GERPERN will now defend and his team shall win by points instead!")
+            print("Wizard_GERPERN notices both his towers are down", TEAM_NAME[self.wizard.opp_team_id]+"'s")
+            print("Wizard_GERPERN will now defend!")
             return "defending"
 
         else:
@@ -258,6 +258,11 @@ class WizardStateMeditating_GERPERN(State):
     def entry_actions(self):
         #print("meditating")
         self.wizard.velocity = Vector2(0, 0)
+
+def getOppBase(self):
+    for entity in self.world.entities.values():
+        if entity.name == "base" and entity.team_id != self.base.team_id:
+            return entity
 
 def teamTowerCount(self):
     towerCount = 0
@@ -358,23 +363,25 @@ def laneCheck(self):
             else:
                 midLane1 += 1
     
-    print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
+    #print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
     # If Knight exists, go to same lane
     if self.friendlyKnight.ko != True:
         print("Wizard_GERPERN has decided on it's plan: Follow the Knight!")
         pathToTake = self.friendlyKnight.currentLane
 
         return pathToTake
-
-    # If all lanes have same no. of Orcs, return None
-    elif (topLane == midLane1 == midLane2 == bottomLane) and topLane <= 1:
-        return None
-
-    # Else return lane with most Orcs
+    
     else:
-        laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
-        print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
-        return int(laneDic.get(max(laneDic)))
+        return None
+    # If all lanes have same no. of Orcs, return None
+    #elif (topLane == midLane1 == midLane2 == bottomLane) and topLane <= 1:
+    #    return None
+
+    ## Else return lane with most Orcs
+    #else:
+    #    laneDic = {topLane:"0", midLane1:"3", midLane2:"2", bottomLane:"1"}
+    #    print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
+    #    return int(laneDic.get(max(laneDic)))
 
 def targetListUpdate(self):
 
