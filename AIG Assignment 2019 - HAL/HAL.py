@@ -23,8 +23,6 @@ from Wizard_GERPERN import *
 from Knight_TeamB import *
 from Archer_TeamB import *
 from Wizard_TeamB import *
-
-
 class World(object):
 
     def __init__(self):

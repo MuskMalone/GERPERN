@@ -489,5 +489,8 @@ class KnightStateKO_GERPERN(State):
         self.knight.position = Vector2(self.knight.base.spawn_position)
         self.knight.velocity = Vector2(0, 0)
         self.knight.target = None
+        path = randint(2,3)
+        self.knight.brain.states["seeking"].path_graph = self.knight.paths[path]
+        self.knight.currentLane = path
 
         return None

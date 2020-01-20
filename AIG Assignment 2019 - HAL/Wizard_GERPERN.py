@@ -37,7 +37,7 @@ class Wizard_GERPERN(Character):
         else:
             self.planBPath = [6,20,7,19]
 
-        self.skillTree = 2
+        self.skillTree = 1
         self.planB = False
 
         self.graph = Graph(self)
@@ -89,7 +89,7 @@ class Wizard_GERPERN(Character):
 
             else:
                 if self.skillTree == 1:     # Increase damage throughout
-                    self.level_up(level-up_stats[1])
+                    self.level_up(level_up_stats[1])
 
                 elif self.skillTree == 2:   # Alternate between healing & ranged cooldown
                     if self.level % 2 == 0:
@@ -227,7 +227,7 @@ class WizardStateMeditating_GERPERN(State):
 
     def do_actions(self):
 
-        print("Wizard_GERPERN is meditating, gaining immense knowledge and waiting for the right moment to strike")
+        #print("Wizard_GERPERN is meditating, gaining immense knowledge and waiting for the right moment to strike")
         # Check if HP is full
         if self.wizard.current_hp != self.wizard.max_hp:
             self.wizard.heal()
@@ -238,8 +238,8 @@ class WizardStateMeditating_GERPERN(State):
 
         if  oppTowerCount(self.wizard) > teamTowerCount(self.wizard) or self.wizard.base.current_hp/self.wizard.base.max_hp < 0.3 and self.wizard.base.current_hp < (getOppBase(self.wizard)).current_hp: #and teamTowerCount(self.wizard) == 0 and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
             self.wizard.planB = True
-            print("Wizard_GERPERN notices both his towers are down", TEAM_NAME[self.wizard.opp_team_id]+"'s")
-            print("Wizard_GERPERN will now defend!")
+            #print("Wizard_GERPERN notices both his towers are down", TEAM_NAME[self.wizard.opp_team_id]+"'s")
+            #print("Wizard_GERPERN will now defend!")
             return "defending"
 
         else:
