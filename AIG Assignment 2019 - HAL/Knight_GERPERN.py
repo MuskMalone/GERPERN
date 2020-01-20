@@ -48,8 +48,7 @@ class Knight_GERPERN(Character):
         self.dodge_vector = None
         self.dodge_cooldown = 0.
         self.detection_distance = 150
-        self.currentLane = 0
-        self.fleeingLane = 0
+        self.currentLane = randint(2,3)
 
         self.maxSpeed = 80
         self.min_target_distance = 100
@@ -101,6 +100,7 @@ class Knight_GERPERN(Character):
         Character.render(self, surface)
         #if self.target:
         #    pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
+
 
 
     def process(self, time_passed):
@@ -221,9 +221,7 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        laneToFlee = randint(2,3)
-        self.path_graph = self.knight.paths[laneToFlee]
-        self.knight.fleeingLane = laneToFlee
+        self.path_graph = self.knight.paths[randint(2,3)]
 
 
     def do_actions(self):
@@ -255,6 +253,7 @@ class KnightStateFleeing_GERPERN(State):
 
 
     def entry_actions(self):
+        print(self.knight.currentLane)
         self.knight.target = None
         nearest_node = self.path_graph.get_nearest_node(self.knight.position)
 
@@ -345,7 +344,6 @@ class KnightStateSeeking_GERPERN(State):
         path = randint(2,3)
         self.path_graph = self.knight.paths[path]
         self.knight.currentLane = path
-        self.knight.fleeingLane = path
 
 
     def do_actions(self):

@@ -195,8 +195,28 @@ class Archer_GERPERN(Character):
                 continue
 
             if Archer_Lane != E_Lane:
-                if entity.target != self.base:
-                    continue
+                if self.base.team_id ==1:
+                    if(self.position-Vector2(900,640)).length() < 5: 
+                        continue
+                    if(self.position-Vector2(935,628)).length() < 5:
+                        continue
+                    if(self.position-Vector2(855,670)).length() < 5:
+                        continue
+                else:
+                    if(self.position-Vector2(126,126)).length() < 5: 
+                        continue
+                    if(self.position-Vector2(150,97)).length() < 5:
+                        continue
+                    if(self.position-Vector2(93,164)).length() < 5:
+                        continue
+##                if self.base.team_id == 0:
+##                    if(self.position-Vector2(126,126)).length() < 5 or (self.position-Vector2(150,97)).length() < 5 or(self.position-Vector2(93,164)).length() < 5:
+##                        continue
+##                else:
+##                    if(self.position-Vector2(900,640)).length() < 5 or (self.position-Vector2(935,628)).length() < 5 or(self.position-Vector2(855 670)).length() < 5:
+##                    #if(self.position-Vector2(900,640)).length() < 5 or (self.position-Vector2(935,628)).length() < 5 or(self.position-Vector2(855 670)).length() < 5:
+##                        continue
+                    
                     
             if nearest_opponent is None:
                 nearest_opponent = entity
@@ -575,7 +595,15 @@ class ArcherStateFleeing_GERPERN(State):
 
 
     def check_conditions(self):
-        
+
+        if self.archer.base.team_id ==0:
+            if (self.archer.position-Vector2(126,126)).length() < 5 or (self.archer.position-Vector2(150,97)).length() < 5 or(self.archer.position-Vector2(93,164)).length() < 5:
+                return "seeking"
+        else:
+            if (self.archer.position-Vector2(900,640)).length() < 5 or (self.archer.position-Vector2(935,628)).length() < 5 or(self.archer.position-Vector2(855,670)).length() < 5:
+            #if (self.position-Vector2(900,640)).length < 5 or (self.position-Vector2(935,628)).length < 5 or(self.position-Vector2(855 670)).length < 5:
+                return "seeking"
+                
         if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
              self.archer.velocity = Vector2(0,0)
              self.archer.normal_pos = None

@@ -69,9 +69,9 @@ class Wizard_GERPERN(Character):
         Character.render(self, surface)
 
         #font = pygame.font.SysFont("comicsansms", 18, True)
-        #msg = font.render(str(self.level), True, (255, 255, 255))
-        #surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
-        #self.graph.render(surface)
+        ##msg = font.render(str(self.level), True, (255, 255, 255))
+        ##surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
+        ##self.graph.render(surface)
         #for x in self.graph.nodes:
         #    i = self.graph.nodes[x]
         #    i_x,i_y = i.position
@@ -192,7 +192,7 @@ class WizardStateRetreating_GERPERN(State):
             self.wizard.target = None
             return "seeking"
 
-        elif (nearest_opponent.position - self.wizard.position).length() >= (self.wizard.min_target_distance*0.85) and self.wizard.current_hp/self.wizard.max_hp >= 0.6:
+        elif (nearest_opponent.position - self.wizard.position).length() <= (self.wizard.min_target_distance*0.85) and self.wizard.current_hp/self.wizard.max_hp >= 0.6:
             return "attacking"
             
         elif self.wizard.current_hp/self.wizard.max_hp >= 0.6 and (self.wizard.world.get(self.wizard.target.id) is None or self.wizard.target.ko or targetListUpdate(self.wizard) == 0):
@@ -201,7 +201,7 @@ class WizardStateRetreating_GERPERN(State):
 
     def entry_actions(self):
         #print("retreating")
-        self.path_graph = self.wizard.friendlyKnight.fleeingLane
+        self.path_graph = self.wizard.friendlyKnight.currentLane
 
         nearest_node = self.wizard.path_graph.get_nearest_node(self.wizard.position)
         self.path = pathFindAStar(self.wizard.path_graph, \
