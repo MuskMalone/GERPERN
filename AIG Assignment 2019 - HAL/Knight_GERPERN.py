@@ -64,7 +64,7 @@ class Knight_GERPERN(Character):
             self.true_spawn_index = 24
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("knight_paths.txt")
+        self.generate_pathfinding_graphs("knight_paths_gerpern.txt")
 
         #state decision diagram
         self.fleeingNode = Decision(message = "fleeing", nodeType = "answer", knight = self) #fleeing state

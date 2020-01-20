@@ -536,6 +536,7 @@ class ArcherStateKiting_GERPERN(State):
             
 
     def entry_actions(self):
+        print("kit")
         self.health = self.archer.current_hp
         if self.archer.target == None:
             self.archer.kite_position = self.archer.normal_pos
@@ -595,13 +596,15 @@ class ArcherStateFleeing_GERPERN(State):
 
 
     def check_conditions(self):
-
+        print("flee: ",self.archer.position)
         if self.archer.base.team_id ==0:
-            if (self.archer.position-Vector2(126,126)).length() < 5 or (self.archer.position-Vector2(150,97)).length() < 5 or(self.archer.position-Vector2(93,164)).length() < 5:
+            if (self.archer.position-Vector2(126,126)).length() < 5 or (self.archer.position-Vector2(150,50)).length() < 5 or(self.archer.position-Vector2(44,164)).length() < 5:
+               
                 return "seeking"
         else:
-            if (self.archer.position-Vector2(900,640)).length() < 5 or (self.archer.position-Vector2(935,628)).length() < 5 or(self.archer.position-Vector2(855,670)).length() < 5:
+            if (self.archer.position-Vector2(900,640)).length() < 5 or (self.archer.position-Vector2(855,727)).length() < 5 or(self.archer.position-Vector2(900,670)).length() < 5:
             #if (self.position-Vector2(900,640)).length < 5 or (self.position-Vector2(935,628)).length < 5 or(self.position-Vector2(855 670)).length < 5:
+                
                 return "seeking"
                 
         if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
@@ -671,6 +674,7 @@ class ArcherStateSeeking_GERPERN(State):
         return None
 
     def entry_actions(self):
+        
         #print("teamidS: ",self.archer.team_id)
         nearest_node = self.archer.path_graph.get_nearest_node(self.archer.position)
         
@@ -709,29 +713,37 @@ class ArcherStateAttacking_GERPERN(State):
         opponent_distance = (self.archer.position - self.archer.target.position).length()
         self.archer.Seconds_passed =(pygame.time.get_ticks()- self.archer.Start_ticks)/1000
         # opponent within range
+        
+        
+        self.archer.velocity = self.archer.target.position - self.archer.position
+        if self.archer.velocity.length() > 0:
+            self.archer.velocity.normalize_ip();
+            self.archer.velocity *= self.archer.maxSpeed
+
+
+    def check_conditions(self):
+        opponent_distance = (self.archer.position - self.archer.target.position).length()
         if opponent_distance <= self.archer.min_target_distance:
             self.archer.velocity = Vector2(0, 0)
             if self.archer.current_ranged_cooldown <= 0:
                 self.archer.ranged_attack(self.archer.target.position)
+                print("nice")
                 self.archer.attacked = "True"
                 
-
-        else:
-            self.archer.velocity = self.archer.target.position - self.archer.position
-            if self.archer.velocity.length() > 0:
-                self.archer.velocity.normalize_ip();
-                self.archer.velocity *= self.archer.maxSpeed
-
-
-    def check_conditions(self):
         if self.archer.Seconds_passed >= 0.5:
-            if self.health > self.archer.current_hp:
+            if self.health > self.archer.current_hp:             
+                if opponent_distance <= self.archer.min_target_distance:
+                    if self.archer.current_ranged_cooldown <= 0:
+                        self.archer.ranged_attack(self.archer.target.position)
+                        print("nice")
+                        self.archer.attacked = "True"
                 return "fleeing"
             else:
                 self.archer.Start_ticks = pygame.time.get_ticks()
                 
         if self.archer.attacked == "True":
             self.archer.attacked = "false"
+            print("huh?")
             return "kiting"
 
         # target is gone
@@ -749,6 +761,7 @@ class ArcherStateAttacking_GERPERN(State):
         return None
 
     def entry_actions(self):
+        print("atk")
         self.health = self.archer.current_hp
         self.archer.Start_ticks = pygame.time.get_ticks()
         return None
