@@ -49,6 +49,7 @@ class Knight_GERPERN(Character):
         self.dodge_cooldown = 0.
         self.detection_distance = 150
         self.currentLane = 0
+        self.fleeingLane = 0
 
         self.maxSpeed = 80
         self.min_target_distance = 100
@@ -63,9 +64,8 @@ class Knight_GERPERN(Character):
             self.true_target_index = 0
             self.true_spawn_index = 24
 
-        self.currentLane = None
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("Archer_paths.txt")
+        self.generate_pathfinding_graphs("knight_paths.txt")
 
         #state decision diagram
         self.fleeingNode = Decision(message = "fleeing", nodeType = "answer", knight = self) #fleeing state
@@ -99,8 +99,8 @@ class Knight_GERPERN(Character):
 
         #self.graph.render(surface)
         Character.render(self, surface)
-        if self.target:
-            pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
+        #if self.target:
+        #    pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
 
 
     def process(self, time_passed):
@@ -221,7 +221,9 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(2,3)]
+        laneToFlee = randint(2,3)
+        self.path_graph = self.knight.paths[laneToFlee]
+        self.knight.fleeingLane = laneToFlee
 
 
     def do_actions(self):
@@ -311,7 +313,6 @@ class KnightStateDodging_GERPERN(State):
             if state != self.knight.brain.active_state.name:
                 return state
         self.pos = Vector2(self.knight.position.x, self.knight.position.y)
-
         return None
 
 
@@ -344,6 +345,7 @@ class KnightStateSeeking_GERPERN(State):
         path = randint(2,3)
         self.path_graph = self.knight.paths[path]
         self.knight.currentLane = path
+        self.knight.fleeingLane = path
 
 
     def do_actions(self):
@@ -372,7 +374,6 @@ class KnightStateSeeking_GERPERN(State):
 
 
     def entry_actions(self):
-        print("knightt" , self.knight.team_id)
         self.knight.target = None
         nearest_node = self.path_graph.get_nearest_node(self.knight.position)
 
