@@ -5,7 +5,7 @@ from Graph import *
 
 from Character import *
 from State import *
-from shared_functions import *
+from shared_functions_GERPERN import *
 
 class Archer_GERPERN(Character):
 
