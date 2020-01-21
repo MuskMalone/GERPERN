@@ -6,6 +6,8 @@ from Graph import *
 from Character import *
 from State import *
 
+from shared_functions import *
+
 class Decision(object):
 
     def __init__(self, trueNode = None, falseNode = None, message = "", nodeType = "question", knight = None):
@@ -221,7 +223,11 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-        self.path_graph = self.knight.paths[randint(2,3)]
+
+        if isTeamBTrue(self.knight):
+            self.path_graph = self.knight.paths[2]
+        else:
+            self.path_graph = self.knight.paths[randint(2,3)]
 
 
     def do_actions(self):
@@ -341,7 +347,10 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        path = randint(2,3)
+        if isTeamBTrue(self.knight):
+            path = 2
+        else:
+            path = randint(2,3)
         self.path_graph = self.knight.paths[path]
         self.knight.currentLane = path
 
@@ -489,7 +498,10 @@ class KnightStateKO_GERPERN(State):
         self.knight.position = Vector2(self.knight.base.spawn_position)
         self.knight.velocity = Vector2(0, 0)
         self.knight.target = None
-        path = randint(2,3)
+        if isTeamBTrue(self.knight):
+            path = 2
+        else:
+            path = randint(2,3)
         self.knight.brain.states["seeking"].path_graph = self.knight.paths[path]
         self.knight.currentLane = path
 

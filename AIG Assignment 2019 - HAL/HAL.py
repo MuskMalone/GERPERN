@@ -96,7 +96,7 @@ class World(object):
         entity.id = self.entity_id
         self.entity_id += 1
 
-
+        4
     def remove_entity(self, entity):
 
         if entity.name == "base":
@@ -422,7 +422,6 @@ def run():
     red_wizard.ranged_cooldown = WIZARD_RANGED_COOLDOWN
     red_wizard.current_hp = red_wizard.max_hp
     world.add_entity(red_wizard)
-    
 
     # --- Initialize other entities in the world ---
     mountain_1 = Obstacle(world, mountain_image_1)

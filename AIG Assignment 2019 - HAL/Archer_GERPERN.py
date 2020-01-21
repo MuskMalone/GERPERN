@@ -5,6 +5,7 @@ from Graph import *
 
 from Character import *
 from State import *
+from shared_functions import *
 
 class Archer_GERPERN(Character):
 
@@ -37,6 +38,7 @@ class Archer_GERPERN(Character):
         else:
             self.enemy_base_index = 24
         self.graph = Graph(self)
+        
         self.generate_Archerpathfinding_graphs("Archer_paths_GERPERN.txt")
         seeking_state = ArcherStateSeeking_GERPERN(self)
         attacking_state = ArcherStateAttacking_GERPERN(self)
@@ -449,11 +451,6 @@ class Archer_GERPERN(Character):
             self.enemy_type = "melee"
         if self.target.name == "wizard":
             self.enemy_type = "safe_melee"
-            
-    
-
-        
-
 
 
 class ArcherStateKiting_GERPERN(State):
@@ -463,7 +460,10 @@ class ArcherStateKiting_GERPERN(State):
         self.archer = archer
         self.health = 0
         
-        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[2]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
         
         
     def do_actions(self):
@@ -584,8 +584,10 @@ class ArcherStateFleeing_GERPERN(State):
         State.__init__(self, "fleeing")
         self.archer = archer
         self.health = None
-        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
-        
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[2]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
 
 
     def do_actions(self):
@@ -638,7 +640,10 @@ class ArcherStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.archer = archer
 
-        self.archer.path_graph = self.archer.paths[randint(0,1)]#randint(0, len(self.archer.paths)-1)]
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[2]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
         
 
 
@@ -792,7 +797,10 @@ class ArcherStateKO_GERPERN(State):
         if self.archer.current_respawn_time <= 0:
             self.archer.current_respawn_time = self.archer.respawn_time
             self.archer.ko = False
-            self.archer.path_graph = self.archer.paths[randint(0, 1)]
+            if isTeamBTrue(self.archer):
+                self.archer.path_graph = self.archer.paths[2]
+            else:
+                self.archer.path_graph = self.archer.paths[randint(0,1)]
             return "seeking"
             
         return None

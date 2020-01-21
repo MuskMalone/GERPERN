@@ -236,7 +236,7 @@ class WizardStateMeditating_GERPERN(State):
         
         laneChosen = laneCheck(self.wizard)
 
-        if  oppTowerCount(self.wizard) > teamTowerCount(self.wizard) or self.wizard.base.current_hp/self.wizard.base.max_hp < 0.3 and self.wizard.base.current_hp < (getOppBase(self.wizard)).current_hp: #and teamTowerCount(self.wizard) == 0 and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
+        if  (oppTowerCount(self.wizard) > teamTowerCount(self.wizard) and teamTowerCount(self.wizard) == 0) or (self.wizard.base.current_hp/self.wizard.base.max_hp < 0.5 and self.wizard.base.current_hp < (getOppBase(self.wizard)).current_hp): #and teamTowerCount(self.wizard) == 0 and self.wizard.world.scores[self.wizard.base.team_id] > self.wizard.world.scores[self.wizard.opp_team_id]:
             self.wizard.planB = True
             #print("Wizard_GERPERN notices both his towers are down", TEAM_NAME[self.wizard.opp_team_id]+"'s")
             #print("Wizard_GERPERN will now defend!")
