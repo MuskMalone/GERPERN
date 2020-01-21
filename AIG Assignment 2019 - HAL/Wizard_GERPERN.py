@@ -366,7 +366,7 @@ def laneCheck(self):
     #print("top: ",topLane,"mid1: ",midLane1,"mid2: ",midLane2,"bottom: ",bottomLane)
     # If Knight exists, go to same lane
     if self.friendlyKnight.ko != True:
-        print("Wizard_GERPERN has decided on it's plan: Follow the Knight!")
+        #print("Wizard_GERPERN has decided on it's plan: Follow the Knight!")
         pathToTake = self.friendlyKnight.currentLane
 
         return pathToTake

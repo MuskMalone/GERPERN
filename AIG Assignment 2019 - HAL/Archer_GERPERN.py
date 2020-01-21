@@ -740,8 +740,8 @@ class ArcherStateAttacking_GERPERN(State):
             self.archer.velocity = Vector2(0, 0)
             if self.archer.current_ranged_cooldown <= 0:
                 self.archer.ranged_attack(self.archer.target.position)
-                print("Current_pos: ",self.archer.position)
-                print("pos: ",self.archer.target.position)
+                #print("Current_pos: ",self.archer.position)
+                #print("pos: ",self.archer.target.position)
                 self.archer.attacked = "True"
                 
         if self.archer.Seconds_passed >= 0.5:
