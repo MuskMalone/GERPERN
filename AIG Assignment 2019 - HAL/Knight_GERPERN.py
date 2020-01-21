@@ -348,7 +348,7 @@ class KnightStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.knight = knight
         if isTeamBTrue(self.knight):
-            path = 2
+            path = 0
         else:
             path = randint(2,3)
         self.path_graph = self.knight.paths[path]
@@ -499,7 +499,7 @@ class KnightStateKO_GERPERN(State):
         self.knight.velocity = Vector2(0, 0)
         self.knight.target = None
         if isTeamBTrue(self.knight):
-            path = 2
+            path = 0
         else:
             path = randint(2,3)
         self.knight.brain.states["seeking"].path_graph = self.knight.paths[path]

@@ -461,7 +461,7 @@ class ArcherStateKiting_GERPERN(State):
         self.health = 0
         
         if isTeamBTrue(self.archer):
-            self.archer.path_graph = self.archer.paths[2]
+            self.archer.path_graph = self.archer.paths[0]
         else:
             self.archer.path_graph = self.archer.paths[randint(0,1)]
         
@@ -585,7 +585,7 @@ class ArcherStateFleeing_GERPERN(State):
         self.archer = archer
         self.health = None
         if isTeamBTrue(self.archer):
-            self.archer.path_graph = self.archer.paths[2]
+            self.archer.path_graph = self.archer.paths[0]
         else:
             self.archer.path_graph = self.archer.paths[randint(0,1)]
 
@@ -641,7 +641,7 @@ class ArcherStateSeeking_GERPERN(State):
         self.archer = archer
 
         if isTeamBTrue(self.archer):
-            self.archer.path_graph = self.archer.paths[2]
+            self.archer.path_graph = self.archer.paths[0]
         else:
             self.archer.path_graph = self.archer.paths[randint(0,1)]
         
@@ -659,7 +659,7 @@ class ArcherStateSeeking_GERPERN(State):
 
     def check_conditions(self):
         if self.archer.current_hp < 100 and self.archer.target == None:
-            print("heal up")
+            #print("heal up")
             self.archer.heal()
         # check if opponent is in range
         nearest_opponent = self.archer.get_nearest_opponent_Archer(self.archer.world)
@@ -732,6 +732,7 @@ class ArcherStateAttacking_GERPERN(State):
         closest_target = self.archer.get_nearest_opponent_Archer(self.archer.world)
         if self.archer.target != None:
             if self.archer.target.name != "base" and self.archer.target.name != "tower":
+                #print("ok")
                 if closest_target != self.archer.target:
                     return "seeking"
         opponent_distance = (self.archer.position - self.archer.target.position).length()
@@ -739,7 +740,8 @@ class ArcherStateAttacking_GERPERN(State):
             self.archer.velocity = Vector2(0, 0)
             if self.archer.current_ranged_cooldown <= 0:
                 self.archer.ranged_attack(self.archer.target.position)
-                print("nice")
+                print("Current_pos: ",self.archer.position)
+                print("pos: ",self.archer.target.position)
                 self.archer.attacked = "True"
                 
         if self.archer.Seconds_passed >= 0.5:
@@ -747,7 +749,6 @@ class ArcherStateAttacking_GERPERN(State):
                 if opponent_distance <= self.archer.min_target_distance:
                     if self.archer.current_ranged_cooldown <= 0:
                         self.archer.ranged_attack(self.archer.target.position)
-                        print("nice")
                         self.archer.attacked = "True"
                 return "fleeing"
             else:
@@ -755,7 +756,6 @@ class ArcherStateAttacking_GERPERN(State):
                 
         if self.archer.attacked == "True":
             self.archer.attacked = "false"
-            ##print("huh?")
             return "kiting"
 
         # target is gone
@@ -798,7 +798,7 @@ class ArcherStateKO_GERPERN(State):
             self.archer.current_respawn_time = self.archer.respawn_time
             self.archer.ko = False
             if isTeamBTrue(self.archer):
-                self.archer.path_graph = self.archer.paths[2]
+                self.archer.path_graph = self.archer.paths[0]
             else:
                 self.archer.path_graph = self.archer.paths[randint(0,1)]
             return "seeking"
