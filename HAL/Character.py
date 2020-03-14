@@ -149,7 +149,9 @@ class Character(GameEntity):
     def render(self, surface):
         if not self.ko:
             GameEntity.render(self, surface)
-
+            #font = pygame.font.SysFont("comicsansms", 18, True)
+            #msg = font.render(str(int(self.position[0]))+","+str(int(self.position[1])), True, (255, 255, 255))
+            #surface.blit(msg, (self.position[0] + 20, self.position[1] -20))
         # --- Visual feedback on level up ---
         if self.level_up_message:
             font = pygame.font.SysFont("comicsansms", 18, True)

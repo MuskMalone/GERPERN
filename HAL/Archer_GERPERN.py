@@ -5,15 +5,15 @@ from Graph import *
 
 from Character import *
 from State import *
+from shared_functions_GERPERN import *
 
 class Archer_GERPERN(Character):
 
     def __init__(self, world, image, projectile_image, base, position):
 
         Character.__init__(self, world, "archer", image)
-
         self.projectile_image = projectile_image
-
+        
         self.base = base
         self.position = position
         self.move_target = GameEntity(world, "archer_move_target", None)
@@ -30,7 +30,7 @@ class Archer_GERPERN(Character):
         self.kite_position = None
         self.enemy_type = None
         self.attacked = "false"
-        self.path = []
+        self.full_path = []
         self.current_connection = 0
         self.reverse_connection = 0
         if self.base.team_id == 1:
@@ -38,15 +38,19 @@ class Archer_GERPERN(Character):
         else:
             self.enemy_base_index = 24
         self.graph = Graph(self)
-        self.generate_Archerpathfinding_graphs("Archer_paths.txt")
+        
+        self.generate_Archerpathfinding_graphs("Archer_paths_GERPERN.txt")
         seeking_state = ArcherStateSeeking_GERPERN(self)
         attacking_state = ArcherStateAttacking_GERPERN(self)
         ko_state = ArcherStateKO_GERPERN(self)
         kiting_state = ArcherStateKiting_GERPERN(self)
+        fleeing_state = ArcherStateFleeing_GERPERN(self)
         self.brain.add_state(seeking_state)
         self.brain.add_state(attacking_state)
         self.brain.add_state(kiting_state)
         self.brain.add_state(ko_state)
+        self.brain.add_state(fleeing_state)
+        
         self.brain.set_state("seeking")
         
 
@@ -111,6 +115,7 @@ class Archer_GERPERN(Character):
             line = f.readline()
             
         f.close()
+    
         
     def getcharLane_Position(self,E):
         Arect = E.image.get_rect(topleft=self.position)
@@ -170,9 +175,67 @@ class Archer_GERPERN(Character):
                     
         return Lane,LanePosition
 
+    def get_nearest_opponent_Archer(self, world):
+        nearest_opponent = None
+        distance = 0.
+
+        for entity in world.entities.values():
+            Archer_Lane,Arhcer_LanePosition = self.getcharLane_Position(self)
+            E_Lane,E_LanePosition = self.getcharLane_Position(entity)
+            # neutral entity
+            if entity.team_id == 2:
+                continue
+
+            # same team
+            if entity.team_id == self.base.team_id:
+                continue
+
+            if entity.name == "projectile" or entity.name == "explosion":
+                continue
+
+            if entity.ko:
+                continue
+
+            if Archer_Lane != E_Lane:
+                if self.base.team_id ==1:
+                    if(self.position-Vector2(900,640)).length() < 5: 
+                        continue
+                    if(self.position-Vector2(935,628)).length() < 5:
+                        continue
+                    if(self.position-Vector2(855,670)).length() < 5:
+                        continue
+                else:
+                    if(self.position-Vector2(126,126)).length() < 5: 
+                        continue
+                    if(self.position-Vector2(150,97)).length() < 5:
+                        continue
+                    if(self.position-Vector2(93,164)).length() < 5:
+                        continue
+##                if self.base.team_id == 0:
+##                    if(self.position-Vector2(126,126)).length() < 5 or (self.position-Vector2(150,97)).length() < 5 or(self.position-Vector2(93,164)).length() < 5:
+##                        continue
+##                else:
+##                    if(self.position-Vector2(900,640)).length() < 5 or (self.position-Vector2(935,628)).length() < 5 or(self.position-Vector2(855 670)).length() < 5:
+##                    #if(self.position-Vector2(900,640)).length() < 5 or (self.position-Vector2(935,628)).length() < 5 or(self.position-Vector2(855 670)).length() < 5:
+##                        continue
+                    
+                    
+            if nearest_opponent is None:
+                nearest_opponent = entity
+                distance = (self.position - entity.position).length()
+            else:
+                if distance > (self.position - entity.position).length():
+                    distance = (self.position - entity.position).length()
+                    nearest_opponent = entity
+        
+        return nearest_opponent
+
+
+
+
     def MovetoSafeLocation_Safe(self,A_Lane,A_LanePos):
         currentx, currenty = self.position
-      
+        self.normal_pos = self.position
         if A_Lane == "Top":
             if A_LanePos == "Top_Side":
                 if self.base.team_id == 1:
@@ -219,15 +282,20 @@ class Archer_GERPERN(Character):
                     else:
                         self.kite_position = Vector2(44,716)
         else:
-            if self.reverse_connection == self.current_connection:
-                if self.reverse_connection >= 1:
-                        self.reverse_connection -= 1
-                        self.kite_position = self.path[self.reverse_connection].fromNode.position
+            if self.reverse_connection == 0:
+                diff = 1000
+                for i in self.full_path:
+                    if (i.fromNode.position - self.position).length() < diff:
+                        self.reverse_connection = self.full_path.index(i)
+                        diff = (i.fromNode.position - self.position).length()
+                #print("reverse_connection: ",self.reverse_connection)
+                self.kite_position = self.full_path[self.reverse_connection].fromNode.position
+                #print("kite: ",self.kite_position)
             else:
                 if (self.position - self.kite_position).length() < 8:
                     if self.reverse_connection >= 1:
                         self.reverse_connection -= 1
-                        self.kite_position = self.path[self.reverse_connection].fromNode.position
+                        self.kite_position = self.full_path[self.reverse_connection].fromNode.position
         
         self.velocity = self.kite_position - self.position
         if self.velocity.length() > 0:
@@ -383,11 +451,6 @@ class Archer_GERPERN(Character):
             self.enemy_type = "melee"
         if self.target.name == "wizard":
             self.enemy_type = "safe_melee"
-            
-    
-
-        
-
 
 
 class ArcherStateKiting_GERPERN(State):
@@ -395,12 +458,18 @@ class ArcherStateKiting_GERPERN(State):
     def __init__(self, archer):
         State.__init__(self, "kiting")
         self.archer = archer
+        self.health = 0
         
-        
-        self.archer.path_graph = self.archer.paths[randint(0, len(self.archer.paths)-1)]
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[0]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
         
         
     def do_actions(self):
+        #print("kiting")
+        #print("kite: ",self.archer.kite_position)
+        #print("npnp",self.archer.normal_pos)
         if self.archer.target != None:
             if self.archer.enemy_type == "aggro_ranged":
                 if self.archer.target.ranged_cooldown > self.archer.ranged_cooldown:
@@ -417,15 +486,36 @@ class ArcherStateKiting_GERPERN(State):
 
 
     def check_conditions(self):
-        if self.archer.target == None:
+        if self.archer.target != None:
+            #print("nope")
+            if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
+                self.archer.target = None
+            
+        if self.archer.target == None:            
             if (self.archer.position - self.archer.normal_pos).length() < 5:
                 self.archer.velocity = Vector2(0,0)
                 self.archer.normal_pos = None
                 self.archer.enemy_type = None
                 self.archer.Action = "not kited"
                 return "seeking"
+            else:
+                #print("work")
+                Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+                self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
 
         else:
+           # print("secs: ",self.archer.Seconds_passed)
+            #print("health: ",self.health)
+            #if self.archer.Seconds_passed >= 0.5:
+               # print("self.health: ",self.health)
+                #print("self.archer.current_hp: ",self.archer.current_hp)
+            if self.health > self.archer.current_hp:
+                    #print("yes")
+                return "fleeing"
+                #else:
+                    #print("no")
+                    #self.archer.Start_ticks = pygame.time.get_ticks()
+                    
             if self.archer.enemy_type == "aggro_ranged": 
                 if (self.archer.position -  self.archer.kite_position).length() < 2:
                     self.archer.velocity = Vector2(0,0)
@@ -438,16 +528,16 @@ class ArcherStateKiting_GERPERN(State):
                     return "attacking"
             else:
                 
-                if(self.archer.position -  self.archer.target.position).length() >= self.archer.min_target_distance:
-                    
-                    self.archer.velocity = Vector2(0,0)
-                    
+                if(self.archer.position -  self.archer.target.position).length() >= self.archer.min_target_distance-75:                    
+                    self.archer.velocity = Vector2(0,0)                    
                 if self.archer.Seconds_passed >= self.archer.ranged_cooldown:
                     
                    return "attacking"
             
 
     def entry_actions(self):
+        #print("kit")
+        self.health = self.archer.current_hp
         if self.archer.target == None:
             self.archer.kite_position = self.archer.normal_pos
             self.archer.velocity = self.archer.kite_position - self.archer.position
@@ -487,6 +577,58 @@ class ArcherStateKiting_GERPERN(State):
             
         
         
+class ArcherStateFleeing_GERPERN(State):
+
+    def __init__(self, archer):
+
+        State.__init__(self, "fleeing")
+        self.archer = archer
+        self.health = None
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[0]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
+
+
+    def do_actions(self):
+        self.archer.heal()
+        Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+        self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
+        self.archer.Seconds_passed =(pygame.time.get_ticks()- self.archer.Start_ticks)/1000
+
+
+    def check_conditions(self):
+        #print("flee: ",self.archer.position)
+        if self.archer.base.team_id ==0:
+            if (self.archer.position-Vector2(126,126)).length() < 5 or (self.archer.position-Vector2(150,50)).length() < 5 or(self.archer.position-Vector2(44,164)).length() < 5:
+               
+                return "seeking"
+        else:
+            if (self.archer.position-Vector2(900,640)).length() < 5 or (self.archer.position-Vector2(855,727)).length() < 5 or(self.archer.position-Vector2(900,670)).length() < 5:
+            #if (self.position-Vector2(900,640)).length < 5 or (self.position-Vector2(935,628)).length < 5 or(self.position-Vector2(855 670)).length < 5:
+                
+                return "seeking"
+                
+        if self.archer.world.get(self.archer.target.id) is None or self.archer.target.ko:
+             self.archer.velocity = Vector2(0,0)
+             self.archer.normal_pos = None
+             self.archer.enemy_type = None
+             self.archer.Action = "not kited"
+             return "seeking"
+        else:
+            if self.archer.Seconds_passed >= 1:
+                if self.archer.current_hp > self.health:
+                    return "seeking"
+                else:
+                    self.archer.Start_ticks = pygame.time.get_ticks()          
+        return None
+
+    def entry_actions(self):
+        Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
+        self.archer.MovetoSafeLocation_Safe(Archer_Lane,Arhcer_LanePosition)
+        self.health = self.archer.current_hp
+        self.archer.Start_ticks = pygame.time.get_ticks()
+        
 
        
 
@@ -498,12 +640,15 @@ class ArcherStateSeeking_GERPERN(State):
         State.__init__(self, "seeking")
         self.archer = archer
 
-        self.archer.path_graph = self.archer.paths[randint(0, len(self.archer.paths)-1)]
+        if isTeamBTrue(self.archer):
+            self.archer.path_graph = self.archer.paths[0]
+        else:
+            self.archer.path_graph = self.archer.paths[randint(0,1)]
         
 
 
     def do_actions(self):
-
+        
         #A_rect = self.archer.GetORects()
         Archer_Lane,Arhcer_LanePosition = self.archer.getcharLane_Position(self.archer)
         self.archer.velocity = self.archer.move_target.position - self.archer.position
@@ -513,9 +658,11 @@ class ArcherStateSeeking_GERPERN(State):
 
 
     def check_conditions(self):
-
+        if self.archer.current_hp < 100 and self.archer.target == None:
+            #print("heal up")
+            self.archer.heal()
         # check if opponent is in range
-        nearest_opponent = self.archer.world.get_nearest_opponent(self.archer)
+        nearest_opponent = self.archer.get_nearest_opponent_Archer(self.archer.world)
         if nearest_opponent is not None:
             opponent_distance = (self.archer.position - nearest_opponent.position).length()
             if opponent_distance <= self.archer.min_target_distance:
@@ -526,27 +673,36 @@ class ArcherStateSeeking_GERPERN(State):
         if (self.archer.position - self.archer.move_target.position).length() < 8:
 
             # continue on path
-            if self.archer.current_connection < self.archer.path_length:
-                self.archer.move_target.position = self.archer.path[self.archer.current_connection].toNode.position
+            if self.archer.current_connection < self.path_length:
+                self.archer.move_target.position = self.path[self.archer.current_connection].toNode.position
                 self.archer.current_connection += 1
-                self.archer.reverse_connection = self.archer.current_connection
+               
             
         return None
 
     def entry_actions(self):
         
+        #print("teamidS: ",self.archer.team_id)
         nearest_node = self.archer.path_graph.get_nearest_node(self.archer.position)
+        
+               
 
-        self.archer.path = pathFindAStar(self.archer.path_graph, \
+        self.path = pathFindAStar(self.archer.path_graph, \
                                   nearest_node, \
                                   self.archer.path_graph.nodes[self.archer.enemy_base_index])
+        if self.archer.base.team_id ==1:
+            if nearest_node.position == Vector2(900,640):
+                for i in self.path:
+                    self.archer.full_path.append(i)
+        else:
+            if nearest_node.position == Vector2(126,126):
+                for i in self.path:
+                    self.archer.full_path.append(i)
+        self.path_length = len(self.path)
 
-        
-        self.archer.path_length = len(self.archer.path)
-
-        if (self.archer.path_length > 0):
+        if (self.path_length > 0):
             self.archer.current_connection = 0
-            self.archer.move_target.position = self.archer.path[0].fromNode.position
+            self.archer.move_target.position = self.path[0].fromNode.position
 
         else:
             self.archer.move_target.position = self.archer.path_graph.nodes[self.archer.enemy_base_index].position
@@ -562,24 +718,42 @@ class ArcherStateAttacking_GERPERN(State):
     def do_actions(self):
 
         opponent_distance = (self.archer.position - self.archer.target.position).length()
-
+        self.archer.Seconds_passed =(pygame.time.get_ticks()- self.archer.Start_ticks)/1000
         # opponent within range
+        
+        
+        self.archer.velocity = self.archer.target.position - self.archer.position
+        if self.archer.velocity.length() > 0:
+            self.archer.velocity.normalize_ip();
+            self.archer.velocity *= self.archer.maxSpeed
+
+
+    def check_conditions(self):
+        closest_target = self.archer.get_nearest_opponent_Archer(self.archer.world)
+        if self.archer.target != None:
+            if self.archer.target.name != "base" and self.archer.target.name != "tower":
+                #print("ok")
+                if closest_target != self.archer.target:
+                    return "seeking"
+        opponent_distance = (self.archer.position - self.archer.target.position).length()
         if opponent_distance <= self.archer.min_target_distance:
             self.archer.velocity = Vector2(0, 0)
             if self.archer.current_ranged_cooldown <= 0:
                 self.archer.ranged_attack(self.archer.target.position)
+                #print("Current_pos: ",self.archer.position)
+                #print("pos: ",self.archer.target.position)
                 self.archer.attacked = "True"
                 
-
-        else:
-            self.archer.velocity = self.archer.target.position - self.archer.position
-            if self.archer.velocity.length() > 0:
-                self.archer.velocity.normalize_ip();
-                self.archer.velocity *= self.archer.maxSpeed
-
-
-    def check_conditions(self):
-
+        if self.archer.Seconds_passed >= 0.5:
+            if self.health > self.archer.current_hp:             
+                if opponent_distance <= self.archer.min_target_distance:
+                    if self.archer.current_ranged_cooldown <= 0:
+                        self.archer.ranged_attack(self.archer.target.position)
+                        self.archer.attacked = "True"
+                return "fleeing"
+            else:
+                self.archer.Start_ticks = pygame.time.get_ticks()
+                
         if self.archer.attacked == "True":
             self.archer.attacked = "false"
             return "kiting"
@@ -599,7 +773,9 @@ class ArcherStateAttacking_GERPERN(State):
         return None
 
     def entry_actions(self):
-
+        #print("atk")
+        self.health = self.archer.current_hp
+        self.archer.Start_ticks = pygame.time.get_ticks()
         return None
 
 
@@ -611,7 +787,7 @@ class ArcherStateKO_GERPERN(State):
         self.archer = archer
 
     def do_actions(self):
-
+        
         return None
 
 
@@ -621,7 +797,10 @@ class ArcherStateKO_GERPERN(State):
         if self.archer.current_respawn_time <= 0:
             self.archer.current_respawn_time = self.archer.respawn_time
             self.archer.ko = False
-            self.archer.path_graph = self.archer.paths[randint(0, len(self.archer.paths)-1)]
+            if isTeamBTrue(self.archer):
+                self.archer.path_graph = self.archer.paths[0]
+            else:
+                self.archer.path_graph = self.archer.paths[randint(0,1)]
             return "seeking"
             
         return None
