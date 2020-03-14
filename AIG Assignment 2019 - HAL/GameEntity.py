@@ -37,7 +37,7 @@ class GameEntity(pygame.sprite.Sprite):
         self.brain = StateMachine()
 
         self.id = 0
-        self.team_id = 1
+        self.team_id = 0
         self.max_hp = 100.
         self.current_hp = self.max_hp
 

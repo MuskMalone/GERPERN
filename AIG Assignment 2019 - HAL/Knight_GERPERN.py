@@ -6,8 +6,6 @@ from Graph import *
 from Character import *
 from State import *
 
-from shared_functions_GERPERN import *
-
 class Decision(object):
 
     def __init__(self, trueNode = None, falseNode = None, message = "", nodeType = "question", knight = None):
@@ -50,23 +48,23 @@ class Knight_GERPERN(Character):
         self.dodge_vector = None
         self.dodge_cooldown = 0.
         self.detection_distance = 150
-        self.currentLane = randint(2,3)
+
+        self.healing_lvl = 0
+        self.heal_cooldown_lvl = 0
+        self.melee_cooldown_lvl = 0
 
         self.maxSpeed = 80
         self.min_target_distance = 100
         self.melee_damage = 20
         self.melee_cooldown = 2.
         self.true_target_index = 0
-        self.true_spawn_index = 0
         if self.base.spawn_node_index == 0:
             self.true_target_index = 24
-            self.true_spawn_index = 0
         elif self.base.spawn_node_index == 4:
             self.true_target_index = 0
-            self.true_spawn_index = 24
 
         self.graph = Graph(self)
-        self.generate_pathfinding_graphs("knight_paths_gerpern.txt")
+        self.generate_pathfinding_graphs("knight_paths.txt")
 
         #state decision diagram
         self.fleeingNode = Decision(message = "fleeing", nodeType = "answer", knight = self) #fleeing state
@@ -98,11 +96,10 @@ class Knight_GERPERN(Character):
 
     def render(self, surface):
 
-        #self.graph.render(surface)
+        self.graph.render(surface)
         Character.render(self, surface)
-        #if self.target:
-        #    pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
-
+        if self.target:
+            pygame.draw.line(surface, (255, 0, 0), self.position, self.target.position)
 
 
     def process(self, time_passed):
@@ -154,8 +151,7 @@ class Knight_GERPERN(Character):
                 continue
 
             if (self.position - entity.position).length() <= self.detection_distance:
-                near_entities[entity.name] = entity
-                #print(name)
+                near_entities[name] = entity
 
         return near_entities
 
@@ -223,11 +219,7 @@ class KnightStateFleeing_GERPERN(State):
 
         State.__init__(self, "fleeing")
         self.knight = knight
-
-        if isTeamBTrue(self.knight):
-            self.path_graph = self.knight.paths[2]
-        else:
-            self.path_graph = self.knight.paths[randint(2,3)]
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
 
     def do_actions(self):
@@ -242,6 +234,15 @@ class KnightStateFleeing_GERPERN(State):
         #print(str(self.knight.get_enemy_list()))
 
     def check_conditions(self):
+
+        ## check if opponent is in range
+        #nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
+        #if nearest_opponent is not None:
+        #    opponent_distance = (self.knight.position - nearest_opponent.position).length()
+        #    if opponent_distance <= self.knight.min_target_distance:
+        #            self.knight.target = nearest_opponent
+
+        #            return "attacking"
         
         if (self.knight.position - self.knight.move_target.position).length() < 8:
 
@@ -259,13 +260,12 @@ class KnightStateFleeing_GERPERN(State):
 
 
     def entry_actions(self):
-        print(self.knight.currentLane)
-        self.knight.target = None
+
         nearest_node = self.path_graph.get_nearest_node(self.knight.position)
 
         self.path = pathFindAStar(self.path_graph, \
                                   nearest_node, \
-                                  self.path_graph.nodes[self.knight.true_spawn_index])
+                                  self.path_graph.nodes[self.knight.base.spawn_node_index])
 
         
         self.path_length = len(self.path)
@@ -276,10 +276,9 @@ class KnightStateFleeing_GERPERN(State):
             self.knight.move_target.position = self.path[0].fromNode.position
 
         else:
-            self.knight.move_target.position = self.path_graph.nodes[self.knight.true_spawn_index].position
+            self.knight.move_target.position = self.path_graph.nodes[self.knight.base.spawn_node_index].position
 
     def exit_actions(self):
-        self.knight.target = None
         return None
 
 class KnightStateDodging_GERPERN(State):
@@ -303,6 +302,7 @@ class KnightStateDodging_GERPERN(State):
 
     def check_conditions(self):
 
+        print(str(self.pos) + "before")
         #check if hes dodged
         if self.dodged is False and (self.knight.position - self.dodge_position).length() <= 5:
             self.dodge_target = self.og_position
@@ -318,6 +318,7 @@ class KnightStateDodging_GERPERN(State):
             if state != self.knight.brain.active_state.name:
                 return state
         self.pos = Vector2(self.knight.position.x, self.knight.position.y)
+        print(str(self.pos) + "after")
         return None
 
 
@@ -327,10 +328,10 @@ class KnightStateDodging_GERPERN(State):
         dodge_vector = dir_vector.rotate(90)
         dodge_vector.normalize_ip()
         chance = randint(0,1)
-        if chance == 0:
-            dodge_vector = dodge_vector*1
-        else:
-            dodge_vector = dodge_vector*-1
+        #if chance == 0:
+        #    dodge_vector = dodge_vector*1
+        #else:
+        #    dodge_vector = dodge_vector*-1
 
         self.og_position = Vector2(self.knight.position.x, self.knight.position.y)
         self.dodge_position = Vector2(self.knight.position.x, self.knight.position.y) + (dodge_vector*40)
@@ -347,12 +348,7 @@ class KnightStateSeeking_GERPERN(State):
 
         State.__init__(self, "seeking")
         self.knight = knight
-        if isTeamBTrue(self.knight):
-            path = 0
-        else:
-            path = randint(2,3)
-        self.path_graph = self.knight.paths[path]
-        self.knight.currentLane = path
+        self.path_graph = self.knight.paths[randint(0, 1)]
 
 
     def do_actions(self):
@@ -430,25 +426,10 @@ class KnightStateAttacking_GERPERN(State):
         #    self.knight.target.brain.set_state("seeking")
 
     def check_conditions(self):
-        if self.knight.target is None:
-            enemies = self.knight.get_enemy_list()
-            if "base" in enemies.keys():
-                self.knight.target = enemies["base"]
-            elif "tower" in enemies.keys():
-                self.knight.target = enemies["tower"]
-            elif "wizard" in enemies.keys():
-                self.knight.target = enemies["wizard"]
-            elif "archer" in enemies.keys():
-                self.knight.target = enemies["archer"]
-            elif "knight" in enemies.keys():
-                self.knight.target = enemies["knight"]
-            elif "orc" in enemies.keys():
-                self.knight.target = enemies["orc"]
 
-        if self.knight.target is not None:
-            if self.knight.world.get(self.knight.target.id) is None or self.knight.target.ko:
-                self.knight.target = None
-
+        nearest_opponent = self.knight.world.get_nearest_opponent(self.knight)
+        if nearest_opponent is not None:
+            self.knight.target = nearest_opponent
         action = self.knight.root.makeDecision()
         state = action.message
         if state != self.knight.brain.active_state.name:
@@ -462,7 +443,6 @@ class KnightStateAttacking_GERPERN(State):
         #    if entity.team_id != 2 and entity.team_id != self.knight.team_id:
         #        if entity.name == "base":
         #            entity.current_hp = -1
-        self.knight.target = None
         return None
 
     def exit_actions(self):
@@ -498,11 +478,5 @@ class KnightStateKO_GERPERN(State):
         self.knight.position = Vector2(self.knight.base.spawn_position)
         self.knight.velocity = Vector2(0, 0)
         self.knight.target = None
-        if isTeamBTrue(self.knight):
-            path = 0
-        else:
-            path = randint(2,3)
-        self.knight.brain.states["seeking"].path_graph = self.knight.paths[path]
-        self.knight.currentLane = path
 
         return None

@@ -54,6 +54,7 @@ class OrcStateSeeking(State):
         self.path_length = len(self.path)
         self.current_connection = 0
         self.orc.move_target.position = self.path[0].fromNode.position
+
     def do_actions(self):
 
         self.orc.velocity = self.orc.move_target.position - self.orc.position
